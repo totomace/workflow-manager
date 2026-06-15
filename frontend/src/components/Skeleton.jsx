@@ -1,9 +1,9 @@
 const Skeleton = ({ className = '' }) => (
-  <div className={`animate-pulse bg-gray-200 rounded ${className}`} />
+  <div className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded ${className}`} />
 );
 
 export const TaskSkeleton = () => (
-  <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border border-gray-100">
+  <div className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
     <div className="flex items-center gap-2 flex-1">
       <Skeleton className="w-4 h-4 rounded-full" />
       <div className="flex-1 space-y-2">
