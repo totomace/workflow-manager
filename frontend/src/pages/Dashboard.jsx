@@ -3,6 +3,7 @@ import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash2, LogOut, CheckCircle, Circle, Clock, Loader2 } from 'lucide-react';
+import toast from 'react-hot-toast'; // <-- THÊM DÒNG NÀY
 
 const statusIcons = {
   todo: <Circle size={16} className="text-gray-400" />,
@@ -43,22 +44,28 @@ const Dashboard = () => {
     fetchTasks();
   }, []);
 
+  // Hàm xử lý thêm/sửa task (đã tích hợp toast)
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
     try {
       if (editId) {
         await client.put(`/tasks/${editId}`, { title, description, status });
+        toast.success('Đã cập nhật task!');
       } else {
         await client.post('/tasks', { title, description, status });
+        toast.success('Đã thêm task mới!');
       }
+      // Reset form
       setTitle('');
       setDescription('');
       setStatus('todo');
       setEditId(null);
       fetchTasks();
     } catch (err) {
-      setError(err.response?.data?.error || 'Có lỗi xảy ra');
+      const message = err.response?.data?.error || 'Có lỗi xảy ra';
+      setError(message);
+      toast.error(message);
     }
   };
 
@@ -69,12 +76,16 @@ const Dashboard = () => {
     setEditId(task.id);
   };
 
+  // Hàm xóa task (chỉ còn 1 bản duy nhất, có toast)
   const handleDelete = async (id) => {
     try {
       await client.delete(`/tasks/${id}`);
+      toast.success('Đã xóa task!');
       fetchTasks();
     } catch (err) {
-      setError('Xóa thất bại');
+      const message = 'Xóa thất bại';
+      setError(message);
+      toast.error(message);
     }
   };
 

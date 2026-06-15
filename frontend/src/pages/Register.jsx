@@ -16,9 +16,12 @@ const Register = () => {
     e.preventDefault();
     try {
       await register(email, fullName, password);
+      toast.success('Đăng ký thành công!');
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error || 'Đăng ký thất bại');
+      const message = err.response?.data?.error || 'Đăng ký thất bại';
+      setError(message);
+      toast.error(message);
     }
   };
 

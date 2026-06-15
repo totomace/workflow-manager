@@ -15,9 +15,12 @@ const Login = () => {
     e.preventDefault();
     try {
       await login(email, password);
+      toast.success('Đăng nhập thành công!');
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.error || 'Đăng nhập thất bại');
+      const message = err.response?.data?.error || 'Đăng nhập thất bại';
+      setError(message);
+      toast.error(message);
     }
   };
 
