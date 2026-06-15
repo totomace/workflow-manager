@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, LogOut, CheckCircle, Circle, Clock, Loader2 } from 'lucide-react';
-import toast from 'react-hot-toast'; // <-- THÊM DÒNG NÀY
+import { Plus, Edit, Trash2, LogOut, CheckCircle, Circle, Clock, Loader2, Search, Filter } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 const statusIcons = {
   todo: <Circle size={16} className="text-gray-400" />,
@@ -28,6 +28,10 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // State cho tìm kiếm & lọc
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all'); // 'all' | 'todo' | 'in_progress' | 'done'
+
   const fetchTasks = async () => {
     try {
       setLoading(true);
@@ -44,7 +48,15 @@ const Dashboard = () => {
     fetchTasks();
   }, []);
 
-  // Hàm xử lý thêm/sửa task (đã tích hợp toast)
+  // Lọc tasks dựa trên searchTerm và filterStatus
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
+      return matchesSearch && matchesStatus;
+    });
+  }, [tasks, searchTerm, filterStatus]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title.trim()) return;
@@ -56,7 +68,6 @@ const Dashboard = () => {
         await client.post('/tasks', { title, description, status });
         toast.success('Đã thêm task mới!');
       }
-      // Reset form
       setTitle('');
       setDescription('');
       setStatus('todo');
@@ -76,7 +87,6 @@ const Dashboard = () => {
     setEditId(task.id);
   };
 
-  // Hàm xóa task (chỉ còn 1 bản duy nhất, có toast)
   const handleDelete = async (id) => {
     try {
       await client.delete(`/tasks/${id}`);
@@ -174,20 +184,53 @@ const Dashboard = () => {
 
         {/* Danh sách task */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">
-            Danh sách task ({tasks.length})
-          </h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <h2 className="text-lg font-semibold text-gray-800">
+              Danh sách task ({filteredTasks.length})
+            </h2>
+
+            {/* Bộ lọc và tìm kiếm */}
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              {/* Input tìm kiếm */}
+              <div className="relative flex-1 sm:flex-none">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 w-full sm:w-48 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
+                />
+              </div>
+
+              {/* Dropdown lọc trạng thái */}
+              <div className="relative">
+                <Filter size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className="pl-10 pr-4 py-2 w-full sm:w-auto bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 focus:bg-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all appearance-none cursor-pointer"
+                >
+                  <option value="all">Tất cả trạng thái</option>
+                  <option value="todo">Cần làm</option>
+                  <option value="in_progress">Đang làm</option>
+                  <option value="done">Hoàn thành</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           {loading ? (
             <div className="flex justify-center py-12">
               <Loader2 className="animate-spin text-violet-500" size={32} />
             </div>
-          ) : tasks.length === 0 ? (
+          ) : filteredTasks.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
-              <p>Chưa có task nào. Hãy tạo task đầu tiên!</p>
+              <p>{tasks.length === 0 ? 'Chưa có task nào. Hãy tạo task đầu tiên!' : 'Không tìm thấy task phù hợp.'}</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {tasks.map((task) => (
+              {filteredTasks.map((task) => (
                 <div
                   key={task.id}
                   className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border border-gray-100 hover:border-violet-200 hover:bg-violet-50/30 transition-colors"
