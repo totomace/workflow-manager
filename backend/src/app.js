@@ -6,6 +6,7 @@ const pool = require("./config/db");
 
 // routes
 const authRoutes = require("./modules/auth/auth.routes");
+const taskRoutes = require("./modules/tasks/tasks.routes"); // <-- thêm dòng này
 
 const app = express();
 
@@ -17,7 +18,6 @@ app.use(express.json());
 app.get("/api/v1/health", async (req, res) => {
   try {
     const result = await pool.query("SELECT NOW()");
-
     res.json({
       status: "ok",
       database: "connected",
@@ -34,10 +34,11 @@ app.get("/api/v1/health", async (req, res) => {
 
 // auth routes
 app.use("/api/v1/auth", authRoutes);
+// task routes
+app.use("/api/v1/tasks", taskRoutes); // <-- thêm dòng này
 
 // start server
 const PORT = process.env.PORT || 5000;
-
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
