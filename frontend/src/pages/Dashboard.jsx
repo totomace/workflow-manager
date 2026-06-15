@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Edit, Trash2, LogOut, CheckCircle, Circle, Clock, Search, Filter, Moon, Sun } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { TaskSkeleton } from '../components/Skeleton';
+import { motion, AnimatePresence } from 'framer-motion'; // <-- THÊM
 
 const statusIcons = {
   todo: <Circle size={16} className="text-gray-400 dark:text-gray-500" />,
@@ -118,14 +119,12 @@ const Dashboard = () => {
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{user?.email}</p>
           </div>
           <div className="flex items-center gap-2">
-            {/* Dark mode toggle */}
             <button
               onClick={toggleDarkMode}
               className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
             >
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            {/* Logout */}
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -142,81 +141,52 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Form thêm/sửa */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8 transition-colors">
+        {/* Form thêm/sửa với animation */}
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 mb-8 transition-colors"
+        >
           <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">
             {editId ? 'Chỉnh sửa task' : 'Thêm task mới'}
           </h2>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <input
-                placeholder="Tiêu đề"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
-              />
-              <input
-                placeholder="Mô tả"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
-              />
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
-              >
+              <input placeholder="Tiêu đề" value={title} onChange={(e) => setTitle(e.target.value)} required className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all" />
+              <input placeholder="Mô tả" value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all" />
+              <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all">
                 <option value="todo">Cần làm</option>
                 <option value="in_progress">Đang làm</option>
                 <option value="done">Hoàn thành</option>
               </select>
             </div>
             <div className="flex gap-2">
-              <button
-                type="submit"
-                className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl font-medium shadow-md hover:shadow-lg hover:shadow-violet-200 dark:hover:shadow-violet-900 transition-all"
-              >
+              <button type="submit" className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl font-medium shadow-md hover:shadow-lg hover:shadow-violet-200 dark:hover:shadow-violet-900 transition-all">
                 {editId ? <Edit size={16} /> : <Plus size={16} />}
                 {editId ? 'Cập nhật' : 'Thêm mới'}
               </button>
               {editId && (
-                <button
-                  type="button"
-                  onClick={() => { setEditId(null); setTitle(''); setDescription(''); setStatus('todo'); }}
-                  className="px-6 py-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
-                >
+                <button type="button" onClick={() => { setEditId(null); setTitle(''); setDescription(''); setStatus('todo'); }} className="px-6 py-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
                   Hủy
                 </button>
               )}
             </div>
           </form>
-        </div>
+        </motion.div>
 
         {/* Danh sách task */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 transition-colors">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
-              Danh sách task ({filteredTasks.length})
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Danh sách task ({filteredTasks.length})</h2>
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               <div className="relative flex-1 sm:flex-none">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-full sm:w-48 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
-                />
+                <input type="text" placeholder="Tìm kiếm..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2 w-full sm:w-48 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all" />
               </div>
               <div className="relative">
                 <Filter size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-full sm:w-auto bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all appearance-none cursor-pointer"
-                >
+                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)} className="pl-10 pr-4 py-2 w-full sm:w-auto bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all appearance-none cursor-pointer">
                   <option value="all">Tất cả trạng thái</option>
                   <option value="todo">Cần làm</option>
                   <option value="in_progress">Đang làm</option>
@@ -238,39 +208,39 @@ const Dashboard = () => {
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-violet-200 dark:hover:border-violet-600 hover:bg-violet-50/30 dark:hover:bg-violet-800/10 transition-colors"
-                >
-                  <div className="flex items-center gap-2 flex-1 min-w-0">
-                    {statusIcons[task.status]}
-                    <div>
-                      <h3 className="font-medium text-gray-900 dark:text-white truncate">{task.title}</h3>
-                      {task.description && (
-                        <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">{task.description}</p>
-                      )}
+              <AnimatePresence>
+                {filteredTasks.map((task) => (
+                  <motion.div
+                    key={task.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.2 }}
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-violet-200 dark:hover:border-violet-600 hover:bg-violet-50/30 dark:hover:bg-violet-800/10 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      {statusIcons[task.status]}
+                      <div>
+                        <h3 className="font-medium text-gray-900 dark:text-white truncate">{task.title}</h3>
+                        {task.description && (
+                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">{task.description}</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                      {statusLabels[task.status]}
-                    </span>
-                    <button
-                      onClick={() => handleEdit(task)}
-                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-800/20 rounded-lg transition-colors"
-                    >
-                      <Edit size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(task.id)}
-                      className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-800/20 rounded-lg transition-colors"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                        {statusLabels[task.status]}
+                      </span>
+                      <button onClick={() => handleEdit(task)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-800/20 rounded-lg transition-colors">
+                        <Edit size={16} />
+                      </button>
+                      <button onClick={() => handleDelete(task.id)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-800/20 rounded-lg transition-colors">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </div>
