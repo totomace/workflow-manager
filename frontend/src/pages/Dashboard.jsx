@@ -2,8 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, LogOut, CheckCircle, Circle, Clock, Loader2, Search, Filter } from 'lucide-react';
+import { Plus, Edit, Trash2, LogOut, CheckCircle, Circle, Clock, Search, Filter } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { TaskSkeleton } from '../components/Skeleton';
 
 const statusIcons = {
   todo: <Circle size={16} className="text-gray-400" />,
@@ -28,9 +29,8 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // State cho tìm kiếm & lọc
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all'); // 'all' | 'todo' | 'in_progress' | 'done'
+  const [filterStatus, setFilterStatus] = useState('all');
 
   const fetchTasks = async () => {
     try {
@@ -48,7 +48,6 @@ const Dashboard = () => {
     fetchTasks();
   }, []);
 
-  // Lọc tasks dựa trên searchTerm và filterStatus
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase());
@@ -189,9 +188,7 @@ const Dashboard = () => {
               Danh sách task ({filteredTasks.length})
             </h2>
 
-            {/* Bộ lọc và tìm kiếm */}
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              {/* Input tìm kiếm */}
               <div className="relative flex-1 sm:flex-none">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
@@ -202,8 +199,6 @@ const Dashboard = () => {
                   className="pl-10 pr-4 py-2 w-full sm:w-48 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
                 />
               </div>
-
-              {/* Dropdown lọc trạng thái */}
               <div className="relative">
                 <Filter size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <select
@@ -221,8 +216,10 @@ const Dashboard = () => {
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="animate-spin text-violet-500" size={32} />
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <TaskSkeleton key={i} />
+              ))}
             </div>
           ) : filteredTasks.length === 0 ? (
             <div className="text-center py-12 text-gray-400">
