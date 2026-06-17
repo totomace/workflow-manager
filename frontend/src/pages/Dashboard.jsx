@@ -71,8 +71,9 @@ const Dashboard = () => {
       description: '',
       status: 'todo',
       amount: 0,
-      start_date: new Date().toISOString().split('T')[0], // hôm nay
-      due_date: '',
+      task_date: '',
+      start_time: '',
+      end_time: '',
     },
   });
 
@@ -220,8 +221,9 @@ const Dashboard = () => {
         description: '',
         status: 'todo',
         amount: 0,
-        start_date: new Date().toISOString().split('T')[0],
-        due_date: '',
+        task_date: '',
+        start_time: '',
+        end_time: '',
       });
       setAmountRaw(0);
       setAmountDisplay('');
@@ -239,8 +241,9 @@ const Dashboard = () => {
     setValue('title', task.title);
     setValue('description', task.description || '');
     setValue('status', task.status);
-    setValue('start_date', task.start_date ? task.start_date.split('T')[0] : '');
-    setValue('due_date', task.due_date ? task.due_date.split('T')[0] : '');
+    setValue('task_date', task.task_date || '');
+    setValue('start_time', task.start_time ? task.start_time.slice(0,5) : '');
+    setValue('end_time', task.end_time ? task.end_time.slice(0,5) : '');
     const amt = task.amount || 0;
     setAmountRaw(amt);
     setAmountDisplay(amt > 0 ? new Intl.NumberFormat('vi-VN').format(amt) : '');
@@ -475,25 +478,34 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Hàng ngày tháng */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            {/* Ngày & Giờ */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ngày bắt đầu</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ngày làm</label>
                 <input
                   type="date"
-                  {...register('start_date')}
+                  {...register('task_date')}
                   className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
                 />
-                {errors.start_date && <p className="text-red-500 text-xs mt-1">{errors.start_date.message}</p>}
+                {errors.task_date && <p className="text-red-500 text-xs mt-1">{errors.task_date.message}</p>}
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ngày kết thúc</label>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Giờ bắt đầu</label>
                 <input
-                  type="date"
-                  {...register('due_date')}
+                  type="time"
+                  {...register('start_time')}
                   className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
                 />
-                {errors.due_date && <p className="text-red-500 text-xs mt-1">{errors.due_date.message}</p>}
+                {errors.start_time && <p className="text-red-500 text-xs mt-1">{errors.start_time.message}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Giờ kết thúc</label>
+                <input
+                  type="time"
+                  {...register('end_time')}
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
+                />
+                {errors.end_time && <p className="text-red-500 text-xs mt-1">{errors.end_time.message}</p>}
               </div>
             </div>
 
@@ -521,8 +533,9 @@ const Dashboard = () => {
                     description: '',
                     status: 'todo',
                     amount: 0,
-                    start_date: new Date().toISOString().split('T')[0],
-                    due_date: '',
+                    task_date: '',
+                    start_time: '',
+                    end_time: '',
                   });
                   setAmountRaw(0);
                   setAmountDisplay('');
@@ -592,15 +605,23 @@ const Dashboard = () => {
                         {task.description && (
                           <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">{task.description}</p>
                         )}
+                        {/* Hiển thị ngày & giờ */}
                         <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-gray-400 dark:text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <Calendar size={12} />
-                            {formatDate(task.start_date)}
-                          </span>
-                          {task.due_date && (
+                          {task.task_date && (
                             <span className="flex items-center gap-1">
-                              → <Calendar size={12} />
-                              {formatDate(task.due_date)}
+                              <Calendar size={12} />
+                              {formatDate(task.task_date)}
+                            </span>
+                          )}
+                          {task.start_time && (
+                            <span className="flex items-center gap-1">
+                              <Clock size={12} />
+                              {task.start_time.slice(0,5)}
+                            </span>
+                          )}
+                          {task.end_time && (
+                            <span className="flex items-center gap-1">
+                              → {task.end_time.slice(0,5)}
                             </span>
                           )}
                         </div>

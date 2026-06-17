@@ -3,10 +3,10 @@ const { getIO } = require('../../socket');
 
 exports.create = async (req, res) => {
   try {
-    const { title, description, status, amount, start_date, due_date } = req.body;
+    const { title, description, status, amount, task_date, start_time, end_time } = req.body;
     if (!title) return res.status(400).json({ error: 'Title is required' });
     const task = await tasksService.create(
-      { title, description, status, amount, start_date, due_date },
+      { title, description, status, amount, task_date, start_time, end_time },
       req.user.id
     );
     getIO().emit('task:created', task);
@@ -40,12 +40,12 @@ exports.getById = async (req, res) => {
 
 exports.update = async (req, res) => {
   try {
-    const { title, description, status, amount, start_date, due_date } = req.body;
+    const { title, description, status, amount, task_date, start_time, end_time } = req.body;
     if (status && !['todo', 'in_progress', 'done'].includes(status)) {
       return res.status(400).json({ error: 'Invalid status' });
     }
     const task = await tasksService.update(req.params.id, req.user.id, {
-      title, description, status, amount, start_date, due_date
+      title, description, status, amount, task_date, start_time, end_time
     });
     if (!task) return res.status(404).json({ error: 'Task not found or forbidden' });
     getIO().emit('task:updated', task);
