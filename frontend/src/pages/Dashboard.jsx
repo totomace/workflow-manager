@@ -46,7 +46,10 @@ const Dashboard = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [moneyPeriod, setMoneyPeriod] = useState('month');
   const [totalMoney, setTotalMoney] = useState(0);
-  const [displayAmount, setDisplayAmount] = useState('');
+
+  // State riêng cho ô tiền, không phụ thuộc form state khi đang gõ
+  const [amountRaw, setAmountRaw] = useState(0);          // số nguyên
+  const [amountDisplay, setAmountDisplay] = useState(''); // hiển thị
   const [amountFocused, setAmountFocused] = useState(false);
 
   const {
@@ -54,14 +57,22 @@ const Dashboard = () => {
     handleSubmit,
     reset,
     setValue,
-    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(taskSchema),
     defaultValues: { title: '', description: '', status: 'todo', amount: 0 },
   });
 
-  const watchAmount = watch('amount');
+  // Đồng bộ amountRaw từ form khi edit task (không focus)
+  useEffect(() => {
+    // Chỉ đồng bộ khi không focus, tránh giật khi đang gõ
+    if (!amountFocused && editId) {
+      // Khi edit, lấy amount từ form (đã được setValue bởi handleEdit)
+      const currentAmount = tasks.find(t => t.id === editId)?.amount || 0;
+      setAmountRaw(currentAmount);
+      setAmountDisplay(currentAmount > 0 ? new Intl.NumberFormat('vi-VN').format(currentAmount) : '');
+    }
+  }, [editId, tasks, amountFocused]);
 
   const fetchTasks = async () => {
     try {
@@ -136,6 +147,8 @@ const Dashboard = () => {
 
   const onSubmit = async (data) => {
     try {
+      // Gán giá trị amount từ state riêng vào data trước khi gửi
+      data.amount = amountRaw;
       if (editId) {
         await client.put(`/tasks/${editId}`, data);
         toast.success('Đã cập nhật task!');
@@ -143,8 +156,10 @@ const Dashboard = () => {
         await client.post('/tasks', data);
         toast.success('Đã thêm task mới!');
       }
+      // Reset form
       reset({ title: '', description: '', status: 'todo', amount: 0 });
-      setDisplayAmount('');
+      setAmountRaw(0);
+      setAmountDisplay('');
       setEditId(null);
       fetchTasks();
     } catch (err) {
@@ -160,7 +175,9 @@ const Dashboard = () => {
     setValue('description', task.description || '');
     setValue('status', task.status);
     setValue('amount', task.amount || 0);
-    setDisplayAmount(task.amount > 0 ? new Intl.NumberFormat('vi-VN').format(task.amount) : '');
+    const amt = task.amount || 0;
+    setAmountRaw(amt);
+    setAmountDisplay(amt > 0 ? new Intl.NumberFormat('vi-VN').format(amt) : '');
   };
 
   const handleDelete = async (id) => {
@@ -332,24 +349,33 @@ const Dashboard = () => {
                   type="text"
                   inputMode="numeric"
                   placeholder="Tiền (VNĐ)"
-                  value={displayAmount}
+                  value={amountDisplay}
                   onChange={(e) => {
                     const rawValue = e.target.value.replace(/\D/g, '');
                     const num = rawValue === '' ? 0 : parseInt(rawValue, 10);
+                    setAmountRaw(num);
                     setValue('amount', num, { shouldValidate: true });
-                    setDisplayAmount(num > 0 ? new Intl.NumberFormat('vi-VN').format(num) : '');
+                    // Khi đang focus, hiển thị số thô để dễ gõ, không format
+                    if (amountFocused) {
+                      setAmountDisplay(rawValue === '' ? '' : rawValue);
+                    } else {
+                      setAmountDisplay(num > 0 ? new Intl.NumberFormat('vi-VN').format(num) : '');
+                    }
                   }}
                   onFocus={() => {
                     setAmountFocused(true);
-                    // Chỉ xóa nếu giá trị là 0, còn lại giữ nguyên định dạng đẹp
-                    if (watchAmount === 0) {
-                      setDisplayAmount('');
+                    // Chuyển về số thô để chỉnh sửa, nếu là 0 thì rỗng
+                    if (amountRaw === 0) {
+                      setAmountDisplay('');
+                    } else {
+                      setAmountDisplay(amountRaw.toString());
                     }
                   }}
                   onBlur={() => {
                     setAmountFocused(false);
-                    // Đảm bảo hiển thị đúng định dạng khi rời ô
-                    setDisplayAmount(watchAmount > 0 ? new Intl.NumberFormat('vi-VN').format(watchAmount) : '');
+                    // Format đẹp khi rời ô
+                    setAmountDisplay(amountRaw > 0 ? new Intl.NumberFormat('vi-VN').format(amountRaw) : '');
+                    setValue('amount', amountRaw, { shouldValidate: true });
                   }}
                   className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
                 />
@@ -370,7 +396,7 @@ const Dashboard = () => {
                 {editId ? 'Cập nhật' : 'Thêm mới'}
               </button>
               {editId && (
-                <button type="button" onClick={() => { setEditId(null); reset({ title: '', description: '', status: 'todo', amount: 0 }); }} className="px-4 sm:px-6 py-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-sm sm:text-base">
+                <button type="button" onClick={() => { setEditId(null); reset({ title: '', description: '', status: 'todo', amount: 0 }); setAmountRaw(0); setAmountDisplay(''); }} className="px-4 sm:px-6 py-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-sm sm:text-base">
                   Hủy
                 </button>
               )}
