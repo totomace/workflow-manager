@@ -77,6 +77,39 @@ class TasksService {
     );
     return result.rows[0].total;
   }
+
+  async getStatusStats(userId, period) {
+    let dateFilter;
+    const now = new Date();
+    switch (period) {
+      case 'week':
+        dateFilter = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+        break;
+      case 'month':
+        dateFilter = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        break;
+      case 'year':
+        dateFilter = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        break;
+      default:
+        dateFilter = new Date(0);
+    }
+
+    const result = await pool.query(
+      `SELECT status, COUNT(*) as count FROM tasks
+       WHERE user_id = $1 AND created_at >= $2
+       GROUP BY status`,
+      [userId, dateFilter]
+    );
+
+    const counts = { todo: 0, in_progress: 0, done: 0 };
+    result.rows.forEach(row => {
+      if (counts.hasOwnProperty(row.status)) {
+        counts[row.status] = parseInt(row.count, 10);
+      }
+    });
+    return counts;
+  }
 }
 
 module.exports = new TasksService();

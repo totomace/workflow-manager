@@ -73,3 +73,14 @@ exports.getMoneyStats = async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 };
+
+exports.getStatusStats = async (req, res) => {
+  try {
+    const { period } = req.query;
+    const counts = await tasksService.getStatusStats(req.user.id, period);
+    res.json({ success: true, counts, period: period || 'all' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+};
