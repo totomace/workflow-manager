@@ -11,17 +11,18 @@ const userRoutes = require("./modules/users/users.routes");
 
 const app = express();
 
-// Danh sách domain được phép truy cập
+// CORS configuration
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
-  'https://workflow-manager-theta.vercel.app' // 👈 thay bằng domain Vercel của bạn sau khi deploy
+  'https://workflow-manager-theta.vercel.app'
 ];
 
-// middleware CORS
 app.use(cors({
   origin: allowedOrigins,
-  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 }));
 
 app.use(express.json());
