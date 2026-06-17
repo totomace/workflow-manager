@@ -336,7 +336,7 @@ const Dashboard = () => {
                   }}
                   onFocus={(e) => {
                     if (watchAmount === 0) {
-                      setValue('amount', '', { shouldValidate: false });
+                      e.target.select();
                     }
                   }}
                   className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
