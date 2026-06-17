@@ -63,7 +63,7 @@ const Dashboard = () => {
 
   const watchAmount = watch('amount');
 
-  // Đồng bộ displayAmount với watchAmount khi không focus
+  // Đồng bộ displayAmount từ watchAmount khi không focus
   useEffect(() => {
     if (!amountFocused) {
       setDisplayAmount(watchAmount > 0 ? new Intl.NumberFormat('vi-VN').format(watchAmount) : '');
@@ -340,20 +340,23 @@ const Dashboard = () => {
                   value={displayAmount}
                   onChange={(e) => {
                     const raw = e.target.value.replace(/\./g, '').replace(/\D/g, '');
-                    setDisplayAmount(e.target.value);
                     const num = raw === '' ? 0 : parseInt(raw, 10);
                     setValue('amount', num, { shouldValidate: true });
+                    // Format và hiển thị dấu chấm ngay khi gõ
+                    setDisplayAmount(num > 0 ? new Intl.NumberFormat('vi-VN').format(num) : '');
                   }}
                   onFocus={() => {
                     setAmountFocused(true);
                     if (watchAmount === 0) {
                       setDisplayAmount('');
                     } else {
+                      // Hiển thị số thô không dấu chấm để dễ chỉnh sửa
                       setDisplayAmount(watchAmount.toString());
                     }
                   }}
                   onBlur={() => {
                     setAmountFocused(false);
+                    // Format lại đẹp khi rời ô
                     setDisplayAmount(watchAmount > 0 ? new Intl.NumberFormat('vi-VN').format(watchAmount) : '');
                   }}
                   className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
