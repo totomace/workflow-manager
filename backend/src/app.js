@@ -6,7 +6,8 @@ const pool = require("./config/db");
 
 // routes
 const authRoutes = require("./modules/auth/auth.routes");
-const taskRoutes = require("./modules/tasks/tasks.routes"); // <-- thêm dòng này
+const taskRoutes = require("./modules/tasks/tasks.routes");
+const userRoutes = require("./modules/users/users.routes"); // <-- THÊM DÒNG NÀY
 
 const app = express();
 
@@ -35,7 +36,9 @@ app.get("/api/v1/health", async (req, res) => {
 // auth routes
 app.use("/api/v1/auth", authRoutes);
 // task routes
-app.use("/api/v1/tasks", taskRoutes); // <-- thêm dòng này
+app.use("/api/v1/tasks", taskRoutes);
+// user routes
+app.use("/api/v1/users", userRoutes); // <-- THÊM DÒNG NÀY
 
 // start server
 const PORT = process.env.PORT || 5000;

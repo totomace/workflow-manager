@@ -7,6 +7,7 @@ import PageTransition from './components/PageTransition';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile'; // <-- ĐÃ IMPORT
 import ProtectedRoute from './components/ProtectedRoute';
 
 const AnimatedRoutes = () => {
@@ -19,6 +20,12 @@ const AnimatedRoutes = () => {
         <Route path="/dashboard" element={
           <ProtectedRoute>
             <PageTransition><Dashboard /></PageTransition>
+          </ProtectedRoute>
+        } />
+        {/* Profile route phải đặt NGOÀI, ngang hàng với dashboard */}
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <PageTransition><Profile /></PageTransition>
           </ProtectedRoute>
         } />
         <Route path="*" element={<Navigate to="/login" />} />

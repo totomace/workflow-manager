@@ -1,9 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { useDarkMode } from '../context/DarkModeContext';
-import { useNavigate } from 'react-router-dom';
-import { Plus, Edit, Trash2, LogOut, CheckCircle, Circle, Clock, Search, Filter, Moon, Sun } from 'lucide-react';
+import {
+  Plus, Edit, Trash2, LogOut, CheckCircle,
+  Circle, Clock, Search, Filter, Moon, Sun, User
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import { TaskSkeleton } from '../components/Skeleton';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -144,6 +147,10 @@ const Dashboard = () => {
             <button onClick={toggleDarkMode} className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
+            {/* Nút Profile được thêm vào đây */}
+            <Link to="/profile" className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+              <User size={18} />
+            </Link>
             <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
               <LogOut size={18} />
               <span className="hidden sm:inline">Đăng xuất</span>
