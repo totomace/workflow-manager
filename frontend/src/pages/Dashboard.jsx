@@ -341,14 +341,14 @@ const Dashboard = () => {
                   }}
                   onFocus={() => {
                     setAmountFocused(true);
+                    // Chỉ xóa nếu giá trị là 0, còn lại giữ nguyên định dạng đẹp
                     if (watchAmount === 0) {
                       setDisplayAmount('');
-                    } else {
-                      setDisplayAmount(watchAmount.toString());
                     }
                   }}
                   onBlur={() => {
                     setAmountFocused(false);
+                    // Đảm bảo hiển thị đúng định dạng khi rời ô
                     setDisplayAmount(watchAmount > 0 ? new Intl.NumberFormat('vi-VN').format(watchAmount) : '');
                   }}
                   className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
