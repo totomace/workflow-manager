@@ -52,11 +52,14 @@ const Dashboard = () => {
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(taskSchema),
     defaultValues: { title: '', description: '', status: 'todo', amount: 0 },
   });
+
+  const watchAmount = watch('amount');
 
   const fetchTasks = async () => {
     try {
@@ -83,10 +86,9 @@ const Dashboard = () => {
     fetchTasks();
     fetchMoneyStats();
 
-    // Lắng nghe sự kiện real-time từ Socket.IO
     socket.on('task:created', (newTask) => {
       setTasks(prev => [newTask, ...prev]);
-      fetchMoneyStats(); // Cập nhật thống kê tiền
+      fetchMoneyStats();
       toast.success('Có task mới được tạo!');
     });
 
@@ -105,7 +107,7 @@ const Dashboard = () => {
       socket.off('task:updated');
       socket.off('task:deleted');
     };
-  }, [moneyPeriod]); // Cập nhật khi moneyPeriod thay đổi
+  }, [moneyPeriod]);
 
   useEffect(() => {
     fetchMoneyStats();
@@ -323,9 +325,20 @@ const Dashboard = () => {
               </div>
               <div>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   placeholder="Tiền (VNĐ)"
-                  {...register('amount')}
+                  value={watchAmount ? new Intl.NumberFormat('vi-VN').format(watchAmount) : ''}
+                  onChange={(e) => {
+                    const raw = e.target.value.replace(/\./g, '').replace(/\D/g, '');
+                    const num = raw === '' ? 0 : parseInt(raw, 10);
+                    setValue('amount', num, { shouldValidate: true });
+                  }}
+                  onFocus={(e) => {
+                    if (watchAmount === 0) {
+                      setValue('amount', '', { shouldValidate: false });
+                    }
+                  }}
                   className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
                 />
                 {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>}
