@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useDarkMode } from '../context/DarkModeContext';
 import {
   Plus, Edit, Trash2, LogOut, CheckCircle,
-  Circle, Clock, Search, Filter, Moon, Sun, User
+  Circle, Clock, Search, Filter, Moon, Sun, User, Calendar
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { TaskSkeleton } from '../components/Skeleton';
@@ -69,7 +69,7 @@ const Dashboard = () => {
     defaultValues: { title: '', description: '', status: 'todo', amount: 0 },
   });
 
-  // ---- Khoảng thời gian cho nhãn ----
+  // Khoảng thời gian cho nhãn
   const getDateRangeLabel = (period) => {
     const now = new Date();
     const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -110,7 +110,6 @@ const Dashboard = () => {
     }
   }, [editId, tasks, amountFocused, setValue]);
 
-  // Fetch tasks
   const fetchTasks = async () => {
     try {
       setLoading(true);
@@ -123,7 +122,6 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch money & status stats
   const fetchMoneyStats = async () => {
     try {
       const res = await client.get(`/tasks/stats/money?period=${moneyPeriod}`);
@@ -181,7 +179,6 @@ const Dashboard = () => {
     fetchStatusStats();
   }, [statusPeriod, tasks]);
 
-  // Filter & search
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       const matchesSearch = task.title
@@ -193,7 +190,6 @@ const Dashboard = () => {
     });
   }, [tasks, searchTerm, filterStatus]);
 
-  // Biểu đồ dữ liệu từ statusStats
   const stats = useMemo(() => {
     return [
       { name: 'Cần làm', value: statusStats.todo || 0, color: COLORS.todo },
@@ -254,6 +250,14 @@ const Dashboard = () => {
       style: 'currency',
       currency: 'VND',
     }).format(value);
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const d = new Date(dateString);
+    return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1)
+      .toString()
+      .padStart(2, '0')}/${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
   };
 
   return (
@@ -346,9 +350,6 @@ const Dashboard = () => {
               </select>
             </div>
           </motion.div>
-
-          {/* Card Trạng thái (mới thay thế cho Pie Chart bên dưới, nhưng vẫn giữ biểu đồ) */}
-          {/* Ta vẫn giữ Pie Chart, nhưng thêm dropdown và nhãn thời gian */}
         </div>
 
         {/* Pie Chart với thời gian */}
@@ -561,11 +562,15 @@ const Dashboard = () => {
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       {statusIcons[task.status]}
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex-1">
                         <h3 className="font-medium text-gray-900 dark:text-white truncate">{task.title}</h3>
                         {task.description && (
                           <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">{task.description}</p>
                         )}
+                        <div className="flex items-center gap-1 mt-1 text-xs text-gray-400 dark:text-gray-500">
+                          <Calendar size={12} />
+                          <span>{formatDate(task.created_at)}</span>
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2 self-end sm:self-auto">
