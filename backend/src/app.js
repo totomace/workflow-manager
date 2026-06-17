@@ -7,12 +7,23 @@ const pool = require("./config/db");
 // routes
 const authRoutes = require("./modules/auth/auth.routes");
 const taskRoutes = require("./modules/tasks/tasks.routes");
-const userRoutes = require("./modules/users/users.routes"); // <-- THÊM DÒNG NÀY
+const userRoutes = require("./modules/users/users.routes");
 
 const app = express();
 
-// middleware
-app.use(cors());
+// Danh sách domain được phép truy cập
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'https://taskflow-xxxx.vercel.app' // 👈 thay bằng domain Vercel của bạn sau khi deploy
+];
+
+// middleware CORS
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true,
+}));
+
 app.use(express.json());
 
 // health check
@@ -38,7 +49,7 @@ app.use("/api/v1/auth", authRoutes);
 // task routes
 app.use("/api/v1/tasks", taskRoutes);
 // user routes
-app.use("/api/v1/users", userRoutes); // <-- THÊM DÒNG NÀY
+app.use("/api/v1/users", userRoutes);
 
 // start server
 const PORT = process.env.PORT || 5000;
