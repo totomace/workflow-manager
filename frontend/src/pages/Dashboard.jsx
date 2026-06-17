@@ -63,13 +63,6 @@ const Dashboard = () => {
 
   const watchAmount = watch('amount');
 
-  // Đồng bộ displayAmount từ watchAmount khi không focus
-  useEffect(() => {
-    if (!amountFocused) {
-      setDisplayAmount(watchAmount > 0 ? new Intl.NumberFormat('vi-VN').format(watchAmount) : '');
-    }
-  }, [watchAmount, amountFocused]);
-
   const fetchTasks = async () => {
     try {
       setLoading(true);
@@ -151,6 +144,7 @@ const Dashboard = () => {
         toast.success('Đã thêm task mới!');
       }
       reset({ title: '', description: '', status: 'todo', amount: 0 });
+      setDisplayAmount('');
       setEditId(null);
       fetchTasks();
     } catch (err) {
@@ -166,6 +160,7 @@ const Dashboard = () => {
     setValue('description', task.description || '');
     setValue('status', task.status);
     setValue('amount', task.amount || 0);
+    setDisplayAmount(task.amount > 0 ? new Intl.NumberFormat('vi-VN').format(task.amount) : '');
   };
 
   const handleDelete = async (id) => {
@@ -339,10 +334,9 @@ const Dashboard = () => {
                   placeholder="Tiền (VNĐ)"
                   value={displayAmount}
                   onChange={(e) => {
-                    const raw = e.target.value.replace(/\./g, '').replace(/\D/g, '');
-                    const num = raw === '' ? 0 : parseInt(raw, 10);
+                    const rawValue = e.target.value.replace(/\D/g, '');
+                    const num = rawValue === '' ? 0 : parseInt(rawValue, 10);
                     setValue('amount', num, { shouldValidate: true });
-                    // Format và hiển thị dấu chấm ngay khi gõ
                     setDisplayAmount(num > 0 ? new Intl.NumberFormat('vi-VN').format(num) : '');
                   }}
                   onFocus={() => {
@@ -350,13 +344,11 @@ const Dashboard = () => {
                     if (watchAmount === 0) {
                       setDisplayAmount('');
                     } else {
-                      // Hiển thị số thô không dấu chấm để dễ chỉnh sửa
                       setDisplayAmount(watchAmount.toString());
                     }
                   }}
                   onBlur={() => {
                     setAmountFocused(false);
-                    // Format lại đẹp khi rời ô
                     setDisplayAmount(watchAmount > 0 ? new Intl.NumberFormat('vi-VN').format(watchAmount) : '');
                   }}
                   className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
