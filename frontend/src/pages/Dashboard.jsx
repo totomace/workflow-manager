@@ -47,8 +47,8 @@ const Dashboard = () => {
   const [moneyPeriod, setMoneyPeriod] = useState('month');
   const [totalMoney, setTotalMoney] = useState(0);
 
-  // State riêng cho ô tiền, không phụ thuộc form state khi đang gõ
-  const [amountRaw, setAmountRaw] = useState(0);          // số nguyên
+  // State riêng cho ô tiền
+  const [amountRaw, setAmountRaw] = useState(0);          // số tiền thực (đã nhân 1000)
   const [amountDisplay, setAmountDisplay] = useState(''); // hiển thị
   const [amountFocused, setAmountFocused] = useState(false);
 
@@ -63,16 +63,18 @@ const Dashboard = () => {
     defaultValues: { title: '', description: '', status: 'todo', amount: 0 },
   });
 
-  // Đồng bộ amountRaw từ form khi edit task (không focus)
+  // Đồng bộ khi edit task: lấy amount từ task (đã là số tiền thực)
   useEffect(() => {
-    // Chỉ đồng bộ khi không focus, tránh giật khi đang gõ
-    if (!amountFocused && editId) {
-      // Khi edit, lấy amount từ form (đã được setValue bởi handleEdit)
-      const currentAmount = tasks.find(t => t.id === editId)?.amount || 0;
-      setAmountRaw(currentAmount);
-      setAmountDisplay(currentAmount > 0 ? new Intl.NumberFormat('vi-VN').format(currentAmount) : '');
+    if (editId && !amountFocused) {
+      const task = tasks.find(t => t.id === editId);
+      if (task) {
+        const amt = task.amount || 0;
+        setAmountRaw(amt);
+        setAmountDisplay(amt > 0 ? new Intl.NumberFormat('vi-VN').format(amt) : '');
+        setValue('amount', amt);
+      }
     }
-  }, [editId, tasks, amountFocused]);
+  }, [editId, tasks, amountFocused, setValue]);
 
   const fetchTasks = async () => {
     try {
@@ -147,7 +149,7 @@ const Dashboard = () => {
 
   const onSubmit = async (data) => {
     try {
-      // Gán giá trị amount từ state riêng vào data trước khi gửi
+      // Gán amount từ state riêng (đã nhân 1000)
       data.amount = amountRaw;
       if (editId) {
         await client.put(`/tasks/${editId}`, data);
@@ -174,7 +176,6 @@ const Dashboard = () => {
     setValue('title', task.title);
     setValue('description', task.description || '');
     setValue('status', task.status);
-    setValue('amount', task.amount || 0);
     const amt = task.amount || 0;
     setAmountRaw(amt);
     setAmountDisplay(amt > 0 ? new Intl.NumberFormat('vi-VN').format(amt) : '');
@@ -348,32 +349,32 @@ const Dashboard = () => {
                 <input
                   type="text"
                   inputMode="numeric"
-                  placeholder="Tiền (VNĐ)"
+                  placeholder="Tiền (VNĐ) - gõ số, tự thêm 000"
                   value={amountDisplay}
                   onChange={(e) => {
                     const rawValue = e.target.value.replace(/\D/g, '');
-                    const num = rawValue === '' ? 0 : parseInt(rawValue, 10);
-                    setAmountRaw(num);
-                    setValue('amount', num, { shouldValidate: true });
-                    // Khi đang focus, hiển thị số thô để dễ gõ, không format
+                    const baseNum = rawValue === '' ? 0 : parseInt(rawValue, 10);
+                    const multiplied = baseNum * 1000; // tự động thêm 3 số 0
+                    setAmountRaw(multiplied);
+                    setValue('amount', multiplied, { shouldValidate: true });
+                    // Khi đang focus, hiển thị số gốc (chưa nhân) để dễ gõ
                     if (amountFocused) {
-                      setAmountDisplay(rawValue === '' ? '' : rawValue);
+                      setAmountDisplay(rawValue);
                     } else {
-                      setAmountDisplay(num > 0 ? new Intl.NumberFormat('vi-VN').format(num) : '');
+                      setAmountDisplay(multiplied > 0 ? new Intl.NumberFormat('vi-VN').format(multiplied) : '');
                     }
                   }}
                   onFocus={() => {
                     setAmountFocused(true);
-                    // Chuyển về số thô để chỉnh sửa, nếu là 0 thì rỗng
                     if (amountRaw === 0) {
                       setAmountDisplay('');
                     } else {
-                      setAmountDisplay(amountRaw.toString());
+                      // Hiển thị số gốc (chia 1000) để người dùng sửa
+                      setAmountDisplay((amountRaw / 1000).toString());
                     }
                   }}
                   onBlur={() => {
                     setAmountFocused(false);
-                    // Format đẹp khi rời ô
                     setAmountDisplay(amountRaw > 0 ? new Intl.NumberFormat('vi-VN').format(amountRaw) : '');
                     setValue('amount', amountRaw, { shouldValidate: true });
                   }}
