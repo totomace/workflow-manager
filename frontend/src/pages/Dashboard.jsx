@@ -44,10 +44,16 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+
+  // Money stats
   const [moneyPeriod, setMoneyPeriod] = useState('month');
   const [totalMoney, setTotalMoney] = useState(0);
 
-  // State cho ô tiền
+  // Status stats
+  const [statusPeriod, setStatusPeriod] = useState('month');
+  const [statusStats, setStatusStats] = useState({ todo: 0, in_progress: 0, done: 0 });
+
+  // Amount input
   const [amountRaw, setAmountRaw] = useState(0);
   const [amountDisplay, setAmountDisplay] = useState('');
   const [amountFocused, setAmountFocused] = useState(false);
@@ -63,13 +69,12 @@ const Dashboard = () => {
     defaultValues: { title: '', description: '', status: 'todo', amount: 0 },
   });
 
-  // Tính nhãn khoảng thời gian cho thống kê tiền
-  const getDateRangeLabel = () => {
+  // ---- Khoảng thời gian cho nhãn ----
+  const getDateRangeLabel = (period) => {
     const now = new Date();
     const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     let startDate;
-
-    switch (moneyPeriod) {
+    switch (period) {
       case 'week':
         startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
         break;
@@ -80,21 +85,19 @@ const Dashboard = () => {
         startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
         break;
       default:
-        startDate = new Date(0); // tất cả
         return 'Tất cả thời gian';
     }
-
     const format = (d) =>
       `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1)
         .toString()
         .padStart(2, '0')}/${d.getFullYear()}`;
-
     return `${format(startDate)} – ${format(endDate)}`;
   };
 
-  const dateRangeLabel = getDateRangeLabel();
+  const moneyRangeLabel = getDateRangeLabel(moneyPeriod);
+  const statusRangeLabel = getDateRangeLabel(statusPeriod);
 
-  // Khi edit task, đồng bộ amount
+  // Đồng bộ amount khi edit
   useEffect(() => {
     if (editId && !amountFocused) {
       const task = tasks.find((t) => t.id === editId);
@@ -107,6 +110,7 @@ const Dashboard = () => {
     }
   }, [editId, tasks, amountFocused, setValue]);
 
+  // Fetch tasks
   const fetchTasks = async () => {
     try {
       setLoading(true);
@@ -119,6 +123,7 @@ const Dashboard = () => {
     }
   };
 
+  // Fetch money & status stats
   const fetchMoneyStats = async () => {
     try {
       const res = await client.get(`/tasks/stats/money?period=${moneyPeriod}`);
@@ -128,13 +133,24 @@ const Dashboard = () => {
     }
   };
 
+  const fetchStatusStats = async () => {
+    try {
+      const res = await client.get(`/tasks/stats/status?period=${statusPeriod}`);
+      setStatusStats(res.data.counts);
+    } catch (err) {
+      console.error('Không thể tải thống kê trạng thái');
+    }
+  };
+
   useEffect(() => {
     fetchTasks();
     fetchMoneyStats();
+    fetchStatusStats();
 
     socket.on('task:created', (newTask) => {
       setTasks((prev) => [newTask, ...prev]);
       fetchMoneyStats();
+      fetchStatusStats();
       toast.success('Có task mới được tạo!');
     });
     socket.on('task:updated', (updatedTask) => {
@@ -142,10 +158,12 @@ const Dashboard = () => {
         prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
       );
       fetchMoneyStats();
+      fetchStatusStats();
     });
     socket.on('task:deleted', ({ id }) => {
       setTasks((prev) => prev.filter((t) => t.id !== Number(id)));
       fetchMoneyStats();
+      fetchStatusStats();
     });
 
     return () => {
@@ -153,12 +171,17 @@ const Dashboard = () => {
       socket.off('task:updated');
       socket.off('task:deleted');
     };
-  }, [moneyPeriod]);
+  }, [moneyPeriod, statusPeriod]);
 
   useEffect(() => {
     fetchMoneyStats();
   }, [moneyPeriod, tasks]);
 
+  useEffect(() => {
+    fetchStatusStats();
+  }, [statusPeriod, tasks]);
+
+  // Filter & search
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       const matchesSearch = task.title
@@ -170,20 +193,18 @@ const Dashboard = () => {
     });
   }, [tasks, searchTerm, filterStatus]);
 
+  // Biểu đồ dữ liệu từ statusStats
   const stats = useMemo(() => {
-    const todo = tasks.filter((t) => t.status === 'todo').length;
-    const inProgress = tasks.filter((t) => t.status === 'in_progress').length;
-    const done = tasks.filter((t) => t.status === 'done').length;
     return [
-      { name: 'Cần làm', value: todo, color: COLORS.todo },
-      { name: 'Đang làm', value: inProgress, color: COLORS.in_progress },
-      { name: 'Hoàn thành', value: done, color: COLORS.done },
+      { name: 'Cần làm', value: statusStats.todo || 0, color: COLORS.todo },
+      { name: 'Đang làm', value: statusStats.in_progress || 0, color: COLORS.in_progress },
+      { name: 'Hoàn thành', value: statusStats.done || 0, color: COLORS.done },
     ];
-  }, [tasks]);
+  }, [statusStats]);
 
   const onSubmit = async (data) => {
     try {
-      data.amount = amountRaw; // gán tiền từ state riêng
+      data.amount = amountRaw;
       if (editId) {
         await client.put(`/tasks/${editId}`, data);
         toast.success('Đã cập nhật task!');
@@ -210,9 +231,7 @@ const Dashboard = () => {
     setValue('status', task.status);
     const amt = task.amount || 0;
     setAmountRaw(amt);
-    setAmountDisplay(
-      amt > 0 ? new Intl.NumberFormat('vi-VN').format(amt) : ''
-    );
+    setAmountDisplay(amt > 0 ? new Intl.NumberFormat('vi-VN').format(amt) : '');
   };
 
   const handleDelete = async (id) => {
@@ -254,22 +273,13 @@ const Dashboard = () => {
             </p>
           </div>
           <div className="flex items-center gap-2 self-end sm:self-auto">
-            <button
-              onClick={toggleDarkMode}
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
+            <button onClick={toggleDarkMode} className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
-            <Link
-              to="/profile"
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-            >
+            <Link to="/profile" className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
               <User size={18} />
             </Link>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
+            <button onClick={handleLogout} className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
               <LogOut size={18} />
               <span className="hidden sm:inline">Đăng xuất</span>
             </button>
@@ -285,30 +295,10 @@ const Dashboard = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8">
           {[
-            {
-              label: 'Tổng task',
-              value: tasks.length,
-              icon: <CheckCircle size={18} className="text-violet-500" />,
-              bg: 'from-violet-500 to-purple-500',
-            },
-            {
-              label: 'Cần làm',
-              value: stats[0].value,
-              icon: <Circle size={18} className="text-gray-500" />,
-              bg: 'from-gray-400 to-gray-500',
-            },
-            {
-              label: 'Đang làm',
-              value: stats[1].value,
-              icon: <Clock size={18} className="text-amber-500" />,
-              bg: 'from-amber-400 to-orange-500',
-            },
-            {
-              label: 'Hoàn thành',
-              value: stats[2].value,
-              icon: <CheckCircle size={18} className="text-emerald-500" />,
-              bg: 'from-emerald-400 to-green-500',
-            },
+            { label: 'Tổng task', value: tasks.length, icon: <CheckCircle size={18} className="text-violet-500" />, bg: 'from-violet-500 to-purple-500' },
+            { label: 'Cần làm', value: statusStats.todo || 0, icon: <Circle size={18} className="text-gray-500" />, bg: 'from-gray-400 to-gray-500' },
+            { label: 'Đang làm', value: statusStats.in_progress || 0, icon: <Clock size={18} className="text-amber-500" />, bg: 'from-amber-400 to-orange-500' },
+            { label: 'Hoàn thành', value: statusStats.done || 0, icon: <CheckCircle size={18} className="text-emerald-500" />, bg: 'from-emerald-400 to-green-500' },
           ].map((card, i) => (
             <motion.div
               key={card.label}
@@ -318,44 +308,36 @@ const Dashboard = () => {
               className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-5 flex items-center justify-between transition-colors"
             >
               <div>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                  {card.label}
-                </p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                  {card.value}
-                </p>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{card.label}</p>
+                <p className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mt-1">{card.value}</p>
               </div>
-              <div
-                className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-r ${card.bg} flex items-center justify-center text-white`}
-              >
+              <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-r ${card.bg} flex items-center justify-center text-white`}>
                 {card.icon}
               </div>
             </motion.div>
           ))}
 
-          {/* Card thống kê tiền (đã thêm khoảng thời gian) */}
+          {/* Card Thu nhập */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="col-span-2 sm:col-span-4 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-5 transition-colors"
+            className="col-span-2 sm:col-span-2 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-5 transition-colors"
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex flex-col justify-between h-full">
               <div>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                  Thu nhập
-                </p>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Thu nhập</p>
                 <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
                   {formatCurrency(totalMoney)}
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                  {dateRangeLabel}
+                  {moneyRangeLabel}
                 </p>
               </div>
               <select
                 value={moneyPeriod}
                 onChange={(e) => setMoneyPeriod(e.target.value)}
-                className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer self-start sm:self-auto"
+                className="mt-3 px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer self-start"
               >
                 <option value="week">7 ngày qua</option>
                 <option value="month">30 ngày qua</option>
@@ -364,17 +346,38 @@ const Dashboard = () => {
               </select>
             </div>
           </motion.div>
+
+          {/* Card Trạng thái (mới thay thế cho Pie Chart bên dưới, nhưng vẫn giữ biểu đồ) */}
+          {/* Ta vẫn giữ Pie Chart, nhưng thêm dropdown và nhãn thời gian */}
         </div>
 
-        {/* Pie Chart */}
+        {/* Pie Chart với thời gian */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 mb-6 sm:mb-8 transition-colors"
         >
-          <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-3 sm:mb-4">
-            Thống kê trạng thái
-          </h2>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 gap-3">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
+                Thống kê trạng thái
+              </h2>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                {statusRangeLabel}
+              </p>
+            </div>
+            <select
+              value={statusPeriod}
+              onChange={(e) => setStatusPeriod(e.target.value)}
+              className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
+            >
+              <option value="week">7 ngày qua</option>
+              <option value="month">30 ngày qua</option>
+              <option value="year">Năm nay</option>
+              <option value="all">Tất cả</option>
+            </select>
+          </div>
+
           {tasks.length === 0 ? (
             <p className="text-center text-gray-400 dark:text-gray-500 py-8">
               Chưa có dữ liệu để hiển thị
@@ -435,11 +438,7 @@ const Dashboard = () => {
                   {...register('title')}
                   className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
                 />
-                {errors.title && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.title.message}
-                  </p>
-                )}
+                {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
               </div>
               <div>
                 <input
@@ -447,11 +446,7 @@ const Dashboard = () => {
                   {...register('description')}
                   className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
                 />
-                {errors.description && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.description.message}
-                  </p>
-                )}
+                {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
               </div>
               <div>
                 <input
@@ -468,11 +463,7 @@ const Dashboard = () => {
                     if (amountFocused) {
                       setAmountDisplay(rawValue);
                     } else {
-                      setAmountDisplay(
-                        multiplied > 0
-                          ? new Intl.NumberFormat('vi-VN').format(multiplied)
-                          : ''
-                      );
+                      setAmountDisplay(multiplied > 0 ? new Intl.NumberFormat('vi-VN').format(multiplied) : '');
                     }
                   }}
                   onFocus={() => {
@@ -485,20 +476,12 @@ const Dashboard = () => {
                   }}
                   onBlur={() => {
                     setAmountFocused(false);
-                    setAmountDisplay(
-                      amountRaw > 0
-                        ? new Intl.NumberFormat('vi-VN').format(amountRaw)
-                        : ''
-                    );
+                    setAmountDisplay(amountRaw > 0 ? new Intl.NumberFormat('vi-VN').format(amountRaw) : '');
                     setValue('amount', amountRaw, { shouldValidate: true });
                   }}
                   className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
                 />
-                {errors.amount && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.amount.message}
-                  </p>
-                )}
+                {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>}
               </div>
               <select
                 {...register('status')}
@@ -510,29 +493,12 @@ const Dashboard = () => {
               </select>
             </div>
             <div className="flex gap-2">
-              <button
-                type="submit"
-                className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl font-medium shadow-md hover:shadow-lg hover:shadow-violet-200 dark:hover:shadow-violet-900 transition-all text-sm sm:text-base"
-              >
+              <button type="submit" className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl font-medium shadow-md hover:shadow-lg hover:shadow-violet-200 dark:hover:shadow-violet-900 transition-all text-sm sm:text-base">
                 {editId ? <Edit size={16} /> : <Plus size={16} />}
                 {editId ? 'Cập nhật' : 'Thêm mới'}
               </button>
               {editId && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditId(null);
-                    reset({
-                      title: '',
-                      description: '',
-                      status: 'todo',
-                      amount: 0,
-                    });
-                    setAmountRaw(0);
-                    setAmountDisplay('');
-                  }}
-                  className="px-4 sm:px-6 py-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-sm sm:text-base"
-                >
+                <button type="button" onClick={() => { setEditId(null); reset({ title: '', description: '', status: 'todo', amount: 0 }); setAmountRaw(0); setAmountDisplay(''); }} className="px-4 sm:px-6 py-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-sm sm:text-base">
                   Hủy
                 </button>
               )}
@@ -548,10 +514,7 @@ const Dashboard = () => {
             </h2>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
               <div className="relative flex-1 sm:flex-none">
-                <Search
-                  size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
-                />
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 <input
                   type="text"
                   placeholder="Tìm kiếm..."
@@ -561,10 +524,7 @@ const Dashboard = () => {
                 />
               </div>
               <div className="relative">
-                <Filter
-                  size={16}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500"
-                />
+                <Filter size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
                 <select
                   value={filterStatus}
                   onChange={(e) => setFilterStatus(e.target.value)}
@@ -581,17 +541,11 @@ const Dashboard = () => {
 
           {loading ? (
             <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <TaskSkeleton key={i} />
-              ))}
+              {[1, 2, 3].map((i) => (<TaskSkeleton key={i} />))}
             </div>
           ) : filteredTasks.length === 0 ? (
             <div className="text-center py-12 text-gray-400 dark:text-gray-500">
-              <p>
-                {tasks.length === 0
-                  ? 'Chưa có task nào. Hãy tạo task đầu tiên!'
-                  : 'Không tìm thấy task phù hợp.'}
-              </p>
+              <p>{tasks.length === 0 ? 'Chưa có task nào. Hãy tạo task đầu tiên!' : 'Không tìm thấy task phù hợp.'}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -608,13 +562,9 @@ const Dashboard = () => {
                     <div className="flex items-center gap-2 flex-1 min-w-0">
                       {statusIcons[task.status]}
                       <div className="min-w-0">
-                        <h3 className="font-medium text-gray-900 dark:text-white truncate">
-                          {task.title}
-                        </h3>
+                        <h3 className="font-medium text-gray-900 dark:text-white truncate">{task.title}</h3>
                         {task.description && (
-                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                            {task.description}
-                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">{task.description}</p>
                         )}
                       </div>
                     </div>
@@ -624,21 +574,9 @@ const Dashboard = () => {
                           {formatCurrency(task.amount)}
                         </span>
                       )}
-                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                        {statusLabels[task.status]}
-                      </span>
-                      <button
-                        onClick={() => handleEdit(task)}
-                        className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-800/20 rounded-lg transition-colors"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(task.id)}
-                        className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-800/20 rounded-lg transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{statusLabels[task.status]}</span>
+                      <button onClick={() => handleEdit(task)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-800/20 rounded-lg transition-colors"><Edit size={16} /></button>
+                      <button onClick={() => handleDelete(task.id)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-800/20 rounded-lg transition-colors"><Trash2 size={16} /></button>
                     </div>
                   </motion.div>
                 ))}
