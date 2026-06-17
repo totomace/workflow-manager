@@ -15,7 +15,7 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
-  'https://taskflow-xxxx.vercel.app' // 👈 thay bằng domain Vercel của bạn sau khi deploy
+  'https://workflow-manager-theta.vercel.app' // 👈 thay bằng domain Vercel của bạn sau khi deploy
 ];
 
 // middleware CORS
