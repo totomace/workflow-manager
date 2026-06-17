@@ -44,6 +44,8 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [moneyPeriod, setMoneyPeriod] = useState('month');
+  const [totalMoney, setTotalMoney] = useState(0);
 
   const {
     register,
@@ -53,7 +55,7 @@ const Dashboard = () => {
     formState: { errors },
   } = useForm({
     resolver: zodResolver(taskSchema),
-    defaultValues: { title: '', description: '', status: 'todo' },
+    defaultValues: { title: '', description: '', status: 'todo', amount: 0 },
   });
 
   const fetchTasks = async () => {
@@ -68,21 +70,34 @@ const Dashboard = () => {
     }
   };
 
+  const fetchMoneyStats = async () => {
+    try {
+      const res = await client.get(`/tasks/stats/money?period=${moneyPeriod}`);
+      setTotalMoney(res.data.total);
+    } catch (err) {
+      console.error('Không thể tải thống kê tiền');
+    }
+  };
+
   useEffect(() => {
     fetchTasks();
+    fetchMoneyStats();
 
-    // Lắng nghe sự kiện real-time
+    // Lắng nghe sự kiện real-time từ Socket.IO
     socket.on('task:created', (newTask) => {
       setTasks(prev => [newTask, ...prev]);
+      fetchMoneyStats(); // Cập nhật thống kê tiền
       toast.success('Có task mới được tạo!');
     });
 
     socket.on('task:updated', (updatedTask) => {
       setTasks(prev => prev.map(t => t.id === updatedTask.id ? updatedTask : t));
+      fetchMoneyStats();
     });
 
     socket.on('task:deleted', ({ id }) => {
       setTasks(prev => prev.filter(t => t.id !== Number(id)));
+      fetchMoneyStats();
     });
 
     return () => {
@@ -90,7 +105,11 @@ const Dashboard = () => {
       socket.off('task:updated');
       socket.off('task:deleted');
     };
-  }, []);
+  }, [moneyPeriod]); // Cập nhật khi moneyPeriod thay đổi
+
+  useEffect(() => {
+    fetchMoneyStats();
+  }, [moneyPeriod, tasks]);
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -120,7 +139,7 @@ const Dashboard = () => {
         await client.post('/tasks', data);
         toast.success('Đã thêm task mới!');
       }
-      reset({ title: '', description: '', status: 'todo' });
+      reset({ title: '', description: '', status: 'todo', amount: 0 });
       setEditId(null);
       fetchTasks();
     } catch (err) {
@@ -135,6 +154,7 @@ const Dashboard = () => {
     setValue('title', task.title);
     setValue('description', task.description || '');
     setValue('status', task.status);
+    setValue('amount', task.amount || 0);
   };
 
   const handleDelete = async (id) => {
@@ -150,6 +170,10 @@ const Dashboard = () => {
   const handleLogout = () => {
     logout();
     navigate('/login');
+  };
+
+  const formatCurrency = (value) => {
+    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
   };
 
   return (
@@ -206,6 +230,33 @@ const Dashboard = () => {
               </div>
             </motion.div>
           ))}
+
+          {/* Card thống kê tiền */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="col-span-2 sm:col-span-4 bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-5 transition-colors"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Thu nhập</p>
+                <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
+                  {formatCurrency(totalMoney)}
+                </p>
+              </div>
+              <select
+                value={moneyPeriod}
+                onChange={(e) => setMoneyPeriod(e.target.value)}
+                className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
+              >
+                <option value="week">Tuần này</option>
+                <option value="month">Tháng này</option>
+                <option value="year">Năm nay</option>
+                <option value="all">Tất cả</option>
+              </select>
+            </div>
+          </motion.div>
         </div>
 
         {/* Pie Chart */}
@@ -253,7 +304,7 @@ const Dashboard = () => {
             {editId ? 'Chỉnh sửa task' : 'Thêm task mới'}
           </h2>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
               <div>
                 <input
                   placeholder="Tiêu đề"
@@ -270,6 +321,15 @@ const Dashboard = () => {
                 />
                 {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
               </div>
+              <div>
+                <input
+                  type="number"
+                  placeholder="Tiền (VNĐ)"
+                  {...register('amount')}
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
+                />
+                {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>}
+              </div>
               <select
                 {...register('status')}
                 className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
@@ -285,7 +345,7 @@ const Dashboard = () => {
                 {editId ? 'Cập nhật' : 'Thêm mới'}
               </button>
               {editId && (
-                <button type="button" onClick={() => { setEditId(null); reset({ title: '', description: '', status: 'todo' }); }} className="px-4 sm:px-6 py-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-sm sm:text-base">
+                <button type="button" onClick={() => { setEditId(null); reset({ title: '', description: '', status: 'todo', amount: 0 }); }} className="px-4 sm:px-6 py-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-sm sm:text-base">
                   Hủy
                 </button>
               )}
@@ -356,6 +416,11 @@ const Dashboard = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 self-end sm:self-auto">
+                      {task.amount > 0 && (
+                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                          {formatCurrency(task.amount)}
+                        </span>
+                      )}
                       <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{statusLabels[task.status]}</span>
                       <button onClick={() => handleEdit(task)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-800/20 rounded-lg transition-colors"><Edit size={16} /></button>
                       <button onClick={() => handleDelete(task.id)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-800/20 rounded-lg transition-colors"><Trash2 size={16} /></button>
