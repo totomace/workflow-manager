@@ -5,4 +5,6 @@ export const taskSchema = z.object({
   description: z.string().max(500, 'Mô tả quá dài').optional().or(z.literal('')),
   status: z.enum(['todo', 'in_progress', 'done']),
   amount: z.coerce.number().min(0, 'Số tiền không được âm').optional().default(0),
+  start_date: z.string().optional(),
+  due_date: z.string().optional(),
 });

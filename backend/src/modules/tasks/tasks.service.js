@@ -1,11 +1,11 @@
 const pool = require('../../config/db');
 
 class TasksService {
-  async create({ title, description, status = 'todo', amount = 0 }, userId) {
+  async create({ title, description, status = 'todo', amount = 0, start_date, due_date }, userId) {
     const result = await pool.query(
-      `INSERT INTO tasks (title, description, status, user_id, amount)
-       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-      [title, description, status, userId, amount]
+      `INSERT INTO tasks (title, description, status, user_id, amount, start_date, due_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [title, description, status, userId, amount, start_date, due_date]
     );
     return result.rows[0];
   }
@@ -29,15 +29,18 @@ class TasksService {
   async update(taskId, userId, updates) {
     const task = await this.getById(taskId, userId);
     if (!task) return null;
-    const { title, description, status, amount } = updates;
+    const { title, description, status, amount, start_date, due_date } = updates;
     const result = await pool.query(
-      `UPDATE tasks SET title = $1, description = $2, status = $3, amount = $4
-       WHERE id = $5 AND user_id = $6 RETURNING *`,
+      `UPDATE tasks SET title = $1, description = $2, status = $3, amount = $4,
+       start_date = $5, due_date = $6
+       WHERE id = $7 AND user_id = $8 RETURNING *`,
       [
         title || task.title,
         description !== undefined ? description : task.description,
         status || task.status,
         amount !== undefined ? amount : task.amount,
+        start_date !== undefined ? start_date : task.start_date,
+        due_date !== undefined ? due_date : task.due_date,
         taskId,
         userId
       ]
