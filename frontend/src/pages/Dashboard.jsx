@@ -14,6 +14,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { taskSchema } from '../schemas/taskSchema';
+import socket from '../socket';
 
 const statusIcons = {
   todo: <Circle size={16} className="text-gray-400 dark:text-gray-500" />,
