@@ -66,7 +66,14 @@ const Dashboard = () => {
     formState: { errors },
   } = useForm({
     resolver: zodResolver(taskSchema),
-    defaultValues: { title: '', description: '', status: 'todo', amount: 0 },
+    defaultValues: {
+      title: '',
+      description: '',
+      status: 'todo',
+      amount: 0,
+      start_date: new Date().toISOString().split('T')[0], // hôm nay
+      due_date: '',
+    },
   });
 
   // Khoảng thời gian cho nhãn
@@ -208,7 +215,14 @@ const Dashboard = () => {
         await client.post('/tasks', data);
         toast.success('Đã thêm task mới!');
       }
-      reset({ title: '', description: '', status: 'todo', amount: 0 });
+      reset({
+        title: '',
+        description: '',
+        status: 'todo',
+        amount: 0,
+        start_date: new Date().toISOString().split('T')[0],
+        due_date: '',
+      });
       setAmountRaw(0);
       setAmountDisplay('');
       setEditId(null);
@@ -225,6 +239,8 @@ const Dashboard = () => {
     setValue('title', task.title);
     setValue('description', task.description || '');
     setValue('status', task.status);
+    setValue('start_date', task.start_date ? task.start_date.split('T')[0] : '');
+    setValue('due_date', task.due_date ? task.due_date.split('T')[0] : '');
     const amt = task.amount || 0;
     setAmountRaw(amt);
     setAmountDisplay(amt > 0 ? new Intl.NumberFormat('vi-VN').format(amt) : '');
@@ -257,7 +273,7 @@ const Dashboard = () => {
     const d = new Date(dateString);
     return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1)
       .toString()
-      .padStart(2, '0')}/${d.getFullYear()} ${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+      .padStart(2, '0')}/${d.getFullYear()}`;
   };
 
   return (
@@ -269,12 +285,8 @@ const Dashboard = () => {
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-              TaskFlow
-            </h1>
-            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-              {user?.email}
-            </p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">TaskFlow</h1>
+            <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{user?.email}</p>
           </div>
           <div className="flex items-center gap-2 self-end sm:self-auto">
             <button onClick={toggleDarkMode} className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
@@ -291,9 +303,7 @@ const Dashboard = () => {
         </div>
 
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl mb-4 sm:mb-6 text-sm">
-            {error}
-          </div>
+          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl mb-4 sm:mb-6 text-sm">{error}</div>
         )}
 
         {/* Stats Cards */}
@@ -334,9 +344,7 @@ const Dashboard = () => {
                 <p className="text-xl sm:text-2xl font-bold text-emerald-600 dark:text-emerald-400 mt-1">
                   {formatCurrency(totalMoney)}
                 </p>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                  {moneyRangeLabel}
-                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{moneyRangeLabel}</p>
               </div>
               <select
                 value={moneyPeriod}
@@ -360,12 +368,8 @@ const Dashboard = () => {
         >
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 sm:mb-4 gap-3">
             <div>
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
-                Thống kê trạng thái
-              </h2>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                {statusRangeLabel}
-              </p>
+              <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Thống kê trạng thái</h2>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{statusRangeLabel}</p>
             </div>
             <select
               value={statusPeriod}
@@ -380,23 +384,13 @@ const Dashboard = () => {
           </div>
 
           {tasks.length === 0 ? (
-            <p className="text-center text-gray-400 dark:text-gray-500 py-8">
-              Chưa có dữ liệu để hiển thị
-            </p>
+            <p className="text-center text-gray-400 dark:text-gray-500 py-8">Chưa có dữ liệu để hiển thị</p>
           ) : (
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
               <div className="w-full sm:w-2/3 max-w-[250px] sm:max-w-xs">
                 <ResponsiveContainer width="100%" height={220}>
                   <PieChart>
-                    <Pie
-                      data={stats}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={55}
-                      outerRadius={90}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
+                    <Pie data={stats} cx="50%" cy="50%" innerRadius={55} outerRadius={90} paddingAngle={5} dataKey="value">
                       {stats.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
@@ -407,13 +401,8 @@ const Dashboard = () => {
               <div className="flex sm:flex-col gap-2 sm:gap-2 flex-wrap justify-center">
                 {stats.map((s) => (
                   <div key={s.name} className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded-full"
-                      style={{ backgroundColor: s.color }}
-                    ></div>
-                    <span className="text-sm text-gray-600 dark:text-gray-300">
-                      {s.name}: {s.value}
-                    </span>
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: s.color }}></div>
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{s.name}: {s.value}</span>
                   </div>
                 ))}
               </div>
@@ -432,7 +421,7 @@ const Dashboard = () => {
             {editId ? 'Chỉnh sửa task' : 'Thêm task mới'}
           </h2>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               <div>
                 <input
                   placeholder="Tiêu đề"
@@ -484,6 +473,31 @@ const Dashboard = () => {
                 />
                 {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>}
               </div>
+            </div>
+
+            {/* Hàng ngày tháng */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ngày bắt đầu</label>
+                <input
+                  type="date"
+                  {...register('start_date')}
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
+                />
+                {errors.start_date && <p className="text-red-500 text-xs mt-1">{errors.start_date.message}</p>}
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ngày kết thúc</label>
+                <input
+                  type="date"
+                  {...register('due_date')}
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
+                />
+                {errors.due_date && <p className="text-red-500 text-xs mt-1">{errors.due_date.message}</p>}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
               <select
                 {...register('status')}
                 className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
@@ -493,13 +507,26 @@ const Dashboard = () => {
                 <option value="done">Hoàn thành</option>
               </select>
             </div>
+
             <div className="flex gap-2">
               <button type="submit" className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl font-medium shadow-md hover:shadow-lg hover:shadow-violet-200 dark:hover:shadow-violet-900 transition-all text-sm sm:text-base">
                 {editId ? <Edit size={16} /> : <Plus size={16} />}
                 {editId ? 'Cập nhật' : 'Thêm mới'}
               </button>
               {editId && (
-                <button type="button" onClick={() => { setEditId(null); reset({ title: '', description: '', status: 'todo', amount: 0 }); setAmountRaw(0); setAmountDisplay(''); }} className="px-4 sm:px-6 py-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-sm sm:text-base">
+                <button type="button" onClick={() => {
+                  setEditId(null);
+                  reset({
+                    title: '',
+                    description: '',
+                    status: 'todo',
+                    amount: 0,
+                    start_date: new Date().toISOString().split('T')[0],
+                    due_date: '',
+                  });
+                  setAmountRaw(0);
+                  setAmountDisplay('');
+                }} className="px-4 sm:px-6 py-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-sm sm:text-base">
                   Hủy
                 </button>
               )}
@@ -510,9 +537,7 @@ const Dashboard = () => {
         {/* Danh sách task */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 transition-colors">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
-              Danh sách task ({filteredTasks.length})
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Danh sách task ({filteredTasks.length})</h2>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
               <div className="relative flex-1 sm:flex-none">
                 <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
@@ -567,9 +592,17 @@ const Dashboard = () => {
                         {task.description && (
                           <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">{task.description}</p>
                         )}
-                        <div className="flex items-center gap-1 mt-1 text-xs text-gray-400 dark:text-gray-500">
-                          <Calendar size={12} />
-                          <span>{formatDate(task.created_at)}</span>
+                        <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-gray-400 dark:text-gray-500">
+                          <span className="flex items-center gap-1">
+                            <Calendar size={12} />
+                            {formatDate(task.start_date)}
+                          </span>
+                          {task.due_date && (
+                            <span className="flex items-center gap-1">
+                              → <Calendar size={12} />
+                              {formatDate(task.due_date)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -579,7 +612,9 @@ const Dashboard = () => {
                           {formatCurrency(task.amount)}
                         </span>
                       )}
-                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{statusLabels[task.status]}</span>
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                        {statusLabels[task.status]}
+                      </span>
                       <button onClick={() => handleEdit(task)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-800/20 rounded-lg transition-colors"><Edit size={16} /></button>
                       <button onClick={() => handleDelete(task.id)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-800/20 rounded-lg transition-colors"><Trash2 size={16} /></button>
                     </div>
