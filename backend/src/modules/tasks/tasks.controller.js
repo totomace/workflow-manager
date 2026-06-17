@@ -1,10 +1,15 @@
 const tasksService = require('./tasks.service');
+const { getIO } = require('../../socket'); // <-- THÊM
 
 exports.create = async (req, res) => {
   try {
     const { title, description, status } = req.body;
     if (!title) return res.status(400).json({ error: 'Title is required' });
     const task = await tasksService.create({ title, description, status }, req.user.id);
+    
+    // Emit sự kiện real-time
+    getIO().emit('task:created', task);
+    
     res.status(201).json({ success: true, task });
   } catch (err) {
     console.error(err);
@@ -41,6 +46,10 @@ exports.update = async (req, res) => {
     }
     const task = await tasksService.update(req.params.id, req.user.id, { title, description, status });
     if (!task) return res.status(404).json({ error: 'Task not found or forbidden' });
+    
+    // Emit sự kiện real-time
+    getIO().emit('task:updated', task);
+    
     res.json({ success: true, task });
   } catch (err) {
     console.error(err);
@@ -52,6 +61,10 @@ exports.delete = async (req, res) => {
   try {
     const task = await tasksService.delete(req.params.id, req.user.id);
     if (!task) return res.status(404).json({ error: 'Task not found or forbidden' });
+    
+    // Emit sự kiện real-time
+    getIO().emit('task:deleted', { id: req.params.id });
+    
     res.json({ success: true, message: 'Task deleted' });
   } catch (err) {
     console.error(err);
