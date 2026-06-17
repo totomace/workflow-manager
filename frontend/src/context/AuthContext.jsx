@@ -20,14 +20,26 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email, password) => {
-    const res = await client.post('/auth/login', { email, password });
-    const { token } = res.data;
+  // Hàm lưu token và cập nhật user
+  const saveToken = (token) => {
     localStorage.setItem('token', token);
     const payload = JSON.parse(atob(token.split('.')[1]));
     setUser({ id: payload.id, email: payload.email });
   };
 
+  // Đăng nhập thường
+  const login = async (email, password) => {
+    const res = await client.post('/auth/login', { email, password });
+    saveToken(res.data.token);
+  };
+
+  // Đăng nhập bằng Google
+  const loginWithGoogle = async (credential) => {
+    const res = await client.post('/auth/google', { credential });
+    saveToken(res.data.token);
+  };
+
+  // Đăng ký
   const register = async (email, full_name, password) => {
     await client.post('/auth/register', { email, full_name, password });
     await login(email, password);
@@ -39,7 +51,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, loginWithGoogle, register, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
