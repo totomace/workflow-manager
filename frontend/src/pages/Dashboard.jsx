@@ -75,7 +75,7 @@ const Dashboard = () => {
 
   const watchAmount = watch('amount');
 
-  // Đồng bộ displayAmount: nếu amount = 0 thì để trống, ngược lại format
+  // Chỉ format khi amount > 0, nếu = 0 thì để trống
   useEffect(() => {
     if (!amountFocused) {
       setDisplayAmount(watchAmount > 0 ? new Intl.NumberFormat('vi-VN').format(watchAmount) : '');
@@ -235,8 +235,8 @@ const Dashboard = () => {
     setValue('start_time', task.start_time ? task.start_time.slice(0, 5) : '');
     setValue('end_time', task.end_time ? task.end_time.slice(0, 5) : '');
 
+    // Cập nhật hiển thị tiền: nếu amount <= 0 thì để trống
     const amt = task.amount || 0;
-    // Luôn set displayAmount dựa trên amount thực
     setDisplayAmount(amt > 0 ? new Intl.NumberFormat('vi-VN').format(amt) : '');
     setAmountFocused(false);
 
@@ -437,39 +437,38 @@ const Dashboard = () => {
                 {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
               </div>
               <div>
-               <input
- type="text"
-  inputMode="numeric"
-  placeholder="Tiền (VNĐ)"
-  value={displayAmount}
-  onChange={(e) => {
-    const rawValue = e.target.value.replace(/\D/g, '');
-    const baseNum = rawValue === '' ? 0 : parseInt(rawValue, 10);
-    const multiplied = baseNum * 1000;
-    setValue('amount', multiplied, { shouldValidate: true });
-    if (amountFocused) {
-      setDisplayAmount(rawValue === '' ? '' : rawValue);
-    } else {
-      setDisplayAmount(multiplied > 0 ? new Intl.NumberFormat('vi-VN').format(multiplied) : '');
-    }
-  }}
-  onFocus={() => {
-    setAmountFocused(true);
-    const current = watch('amount');
-    // Nếu amount = 0 => để trống; ngược lại hiển thị số gốc chia 1000
-    if (current === 0) {
-      setDisplayAmount('');
-    } else {
-      setDisplayAmount(Math.floor(current / 1000).toString());
-    }
-  }}
-  onBlur={() => {
-    setAmountFocused(false);
-    const current = watch('amount');
-    setDisplayAmount(current > 0 ? new Intl.NumberFormat('vi-VN').format(current) : '');
-  }}
-  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
-/>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="Tiền (VNĐ)"
+                  value={displayAmount}
+                  onChange={(e) => {
+                    const rawValue = e.target.value.replace(/\D/g, '');
+                    const baseNum = rawValue === '' ? 0 : parseInt(rawValue, 10);
+                    const multiplied = baseNum * 1000;
+                    setValue('amount', multiplied, { shouldValidate: true });
+                    if (amountFocused) {
+                      setDisplayAmount(rawValue === '' ? '' : rawValue);
+                    } else {
+                      setDisplayAmount(multiplied > 0 ? new Intl.NumberFormat('vi-VN').format(multiplied) : '');
+                    }
+                  }}
+                  onFocus={() => {
+                    setAmountFocused(true);
+                    const current = watch('amount');
+                    if (current === 0) {
+                      setDisplayAmount('');
+                    } else {
+                      setDisplayAmount(Math.floor(current / 1000).toString());
+                    }
+                  }}
+                  onBlur={() => {
+                    setAmountFocused(false);
+                    const current = watch('amount');
+                    setDisplayAmount(current > 0 ? new Intl.NumberFormat('vi-VN').format(current) : '');
+                  }}
+                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
+                />
                 {errors.amount && <p className="text-red-500 text-xs mt-1">{errors.amount.message}</p>}
               </div>
             </div>
