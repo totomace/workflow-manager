@@ -88,18 +88,19 @@ const Dashboard = () => {
     }
   };
 
-  const fetchMoneyStats = async () => {
+  // Hàm fetch nhận tham số period, không dùng state
+  const fetchMoneyStats = async (period) => {
     try {
-      const res = await client.get(`/tasks/stats/money?period=${moneyPeriod}`);
+      const res = await client.get(`/tasks/stats/money?period=${period || moneyPeriod}`);
       setTotalMoney(res.data.total);
     } catch (err) {
       console.error('Không thể tải thống kê tiền');
     }
   };
 
-  const fetchStatusStats = async () => {
+  const fetchStatusStats = async (period) => {
     try {
-      const res = await client.get(`/tasks/stats/status?period=${statusPeriod}`);
+      const res = await client.get(`/tasks/stats/status?period=${period || statusPeriod}`);
       setStatusStats(res.data.counts);
     } catch (err) {
       console.error('Không thể tải thống kê trạng thái');
@@ -108,41 +109,35 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchTasks();
-    fetchMoneyStats();
-    fetchStatusStats();
+    // Gọi lần đầu với giá trị mặc định (month)
+    fetchMoneyStats('month');
+    fetchStatusStats('month');
 
     socket.on('task:created', (newTask) => {
       setTasks((prev) => [newTask, ...prev]);
-      fetchMoneyStats();
-      fetchStatusStats();
+      // Khi có task mới, fetch lại thống kê với period hiện tại (dùng state)
+      fetchMoneyStats(moneyPeriod);
+      fetchStatusStats(statusPeriod);
       toast.success('Có task mới được tạo!');
     });
     socket.on('task:updated', (updatedTask) => {
       setTasks((prev) =>
         prev.map((t) => (t.id === updatedTask.id ? updatedTask : t))
       );
-      fetchMoneyStats();
-      fetchStatusStats();
+      fetchMoneyStats(moneyPeriod);
+      fetchStatusStats(statusPeriod);
     });
     socket.on('task:deleted', ({ id }) => {
       setTasks((prev) => prev.filter((t) => t.id !== Number(id)));
-      fetchMoneyStats();
-      fetchStatusStats();
+      fetchMoneyStats(moneyPeriod);
+      fetchStatusStats(statusPeriod);
     });
     return () => {
       socket.off('task:created');
       socket.off('task:updated');
       socket.off('task:deleted');
     };
-  }, [moneyPeriod, statusPeriod]);
-
-  useEffect(() => {
-    fetchMoneyStats();
-  }, [moneyPeriod, tasks]);
-
-  useEffect(() => {
-    fetchStatusStats();
-  }, [statusPeriod, tasks]);
+  }, []); // Chỉ chạy một lần khi mount
 
   // ==================== FILTER & STATS ====================
   const filteredTasks = useMemo(() => {
@@ -211,6 +206,9 @@ const Dashboard = () => {
       setDisplayAmount('');
       setEditId(null);
       fetchTasks();
+      // Cập nhật lại thống kê sau khi thêm/sửa
+      fetchMoneyStats(moneyPeriod);
+      fetchStatusStats(statusPeriod);
     } catch (err) {
       const message = err.response?.data?.error || 'Có lỗi xảy ra';
       setError(message);
@@ -228,12 +226,10 @@ const Dashboard = () => {
     setValue('start_time', task.start_time ? task.start_time.slice(0, 5) : '');
     setValue('end_time', task.end_time ? task.end_time.slice(0, 5) : '');
 
-    // Chỉ set displayAmount khi amount > 0, nếu không giữ nguyên rỗng
     const amt = task.amount || 0;
     setDisplayAmount(amt > 0 ? new Intl.NumberFormat('vi-VN').format(amt) : '');
     setAmountFocused(false);
 
-    // Cuộn lên form
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -242,6 +238,8 @@ const Dashboard = () => {
       await client.delete(`/tasks/${id}`);
       toast.success('Đã xóa task!');
       fetchTasks();
+      fetchMoneyStats(moneyPeriod);
+      fetchStatusStats(statusPeriod);
     } catch (err) {
       toast.error('Xóa thất bại');
     }
@@ -340,7 +338,11 @@ const Dashboard = () => {
               </div>
               <select
                 value={moneyPeriod}
-                onChange={(e) => setMoneyPeriod(e.target.value)}
+                onChange={(e) => {
+                  const newPeriod = e.target.value;
+                  setMoneyPeriod(newPeriod);
+                  fetchMoneyStats(newPeriod);
+                }}
                 className="mt-3 px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer self-start"
               >
                 <option value="week">7 ngày qua</option>
@@ -365,7 +367,11 @@ const Dashboard = () => {
             </div>
             <select
               value={statusPeriod}
-              onChange={(e) => setStatusPeriod(e.target.value)}
+              onChange={(e) => {
+                const newPeriod = e.target.value;
+                setStatusPeriod(newPeriod);
+                fetchStatusStats(newPeriod);
+              }}
               className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
             >
               <option value="week">7 ngày qua</option>
