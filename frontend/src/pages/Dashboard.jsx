@@ -49,11 +49,8 @@ const Dashboard = () => {
   const [statusPeriod, setStatusPeriod] = useState('month');
   const [statusStats, setStatusStats] = useState({ todo: 0, in_progress: 0, done: 0 });
 
-  // State hiển thị cho ô tiền
   const [displayAmount, setDisplayAmount] = useState('');
   const [amountFocused, setAmountFocused] = useState(false);
-
-  // Ref cho form thêm/sửa
   const formRef = useRef(null);
 
   const {
@@ -78,7 +75,7 @@ const Dashboard = () => {
 
   const watchAmount = watch('amount');
 
-  // Đồng bộ displayAmount khi amount thay đổi từ bên ngoài (khi edit)
+  // Đồng bộ displayAmount: nếu amount = 0 thì để trống, ngược lại format
   useEffect(() => {
     if (!amountFocused) {
       setDisplayAmount(watchAmount > 0 ? new Intl.NumberFormat('vi-VN').format(watchAmount) : '');
@@ -173,7 +170,6 @@ const Dashboard = () => {
     ];
   }, [statusStats]);
 
-  // ==================== DATE LABEL ====================
   const getDateRangeLabel = (period) => {
     const now = new Date();
     const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -231,7 +227,6 @@ const Dashboard = () => {
 
   const handleEdit = (task) => {
     setEditId(task.id);
-    // Set tất cả các trường, đảm bảo ngày tháng đúng định dạng
     setValue('title', task.title);
     setValue('description', task.description || '');
     setValue('status', task.status);
@@ -240,12 +235,10 @@ const Dashboard = () => {
     setValue('start_time', task.start_time ? task.start_time.slice(0, 5) : '');
     setValue('end_time', task.end_time ? task.end_time.slice(0, 5) : '');
 
-    // Cập nhật hiển thị tiền
     const amt = task.amount || 0;
     setDisplayAmount(amt > 0 ? new Intl.NumberFormat('vi-VN').format(amt) : '');
     setAmountFocused(false);
 
-    // Tự động cuộn lên form
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
@@ -264,7 +257,6 @@ const Dashboard = () => {
     navigate('/login');
   };
 
-  // ==================== FORMAT HELPERS ====================
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -447,15 +439,16 @@ const Dashboard = () => {
                 <input
                   type="text"
                   inputMode="numeric"
-                  placeholder="Tiền (VNĐ) - gõ số, tự thêm 000"
+                  placeholder="Tiền (VNĐ)"
                   value={displayAmount}
                   onChange={(e) => {
                     const rawValue = e.target.value.replace(/\D/g, '');
                     const baseNum = rawValue === '' ? 0 : parseInt(rawValue, 10);
                     const multiplied = baseNum * 1000;
                     setValue('amount', multiplied, { shouldValidate: true });
+                    // Khi đang focus: hiển thị số thô (hoặc rỗng nếu chưa nhập)
                     if (amountFocused) {
-                      setDisplayAmount(rawValue);
+                      setDisplayAmount(rawValue === '' ? '' : rawValue);
                     } else {
                       setDisplayAmount(multiplied > 0 ? new Intl.NumberFormat('vi-VN').format(multiplied) : '');
                     }
@@ -472,6 +465,7 @@ const Dashboard = () => {
                   onBlur={() => {
                     setAmountFocused(false);
                     const current = watch('amount');
+                    // Sau khi blur, nếu amount = 0 thì để trống, ngược lại format
                     setDisplayAmount(current > 0 ? new Intl.NumberFormat('vi-VN').format(current) : '');
                   }}
                   className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
