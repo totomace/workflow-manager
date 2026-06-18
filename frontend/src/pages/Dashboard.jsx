@@ -75,13 +75,6 @@ const Dashboard = () => {
 
   const watchAmount = watch('amount');
 
-  // Đồng bộ hiển thị tiền: chỉ format khi amount > 0
-  useEffect(() => {
-    if (!amountFocused) {
-      setDisplayAmount(watchAmount > 0 ? new Intl.NumberFormat('vi-VN').format(watchAmount) : '');
-    }
-  }, [watchAmount, amountFocused]);
-
   // ==================== FETCH ====================
   const fetchTasks = async () => {
     try {
@@ -235,7 +228,7 @@ const Dashboard = () => {
     setValue('start_time', task.start_time ? task.start_time.slice(0, 5) : '');
     setValue('end_time', task.end_time ? task.end_time.slice(0, 5) : '');
 
-    // Chỉ format khi có tiền, nếu không thì để trống
+    // Chỉ set displayAmount khi amount > 0, nếu không giữ nguyên rỗng
     const amt = task.amount || 0;
     setDisplayAmount(amt > 0 ? new Intl.NumberFormat('vi-VN').format(amt) : '');
     setAmountFocused(false);
