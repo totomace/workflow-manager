@@ -236,6 +236,7 @@ const Dashboard = () => {
     setValue('end_time', task.end_time ? task.end_time.slice(0, 5) : '');
 
     const amt = task.amount || 0;
+    // Luôn set displayAmount dựa trên amount thực
     setDisplayAmount(amt > 0 ? new Intl.NumberFormat('vi-VN').format(amt) : '');
     setAmountFocused(false);
 
@@ -456,6 +457,7 @@ const Dashboard = () => {
                   onFocus={() => {
                     setAmountFocused(true);
                     const current = watch('amount');
+                    // Nếu amount = 0 => để trống; ngược lại hiển thị số gốc chia 1000
                     if (current === 0) {
                       setDisplayAmount('');
                     } else {
