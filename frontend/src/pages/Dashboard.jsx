@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import client from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -44,25 +44,24 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-
-  // Money stats
   const [moneyPeriod, setMoneyPeriod] = useState('month');
   const [totalMoney, setTotalMoney] = useState(0);
-
-  // Status stats
   const [statusPeriod, setStatusPeriod] = useState('month');
   const [statusStats, setStatusStats] = useState({ todo: 0, in_progress: 0, done: 0 });
 
-  // Amount input
-  const [amountRaw, setAmountRaw] = useState(0);
-  const [amountDisplay, setAmountDisplay] = useState('');
+  // State hiển thị cho ô tiền
+  const [displayAmount, setDisplayAmount] = useState('');
   const [amountFocused, setAmountFocused] = useState(false);
+
+  // Ref cho form thêm/sửa
+  const formRef = useRef(null);
 
   const {
     register,
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(taskSchema),
@@ -77,47 +76,16 @@ const Dashboard = () => {
     },
   });
 
-  // Khoảng thời gian cho nhãn
-  const getDateRangeLabel = (period) => {
-    const now = new Date();
-    const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    let startDate;
-    switch (period) {
-      case 'week':
-        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
-        break;
-      case 'month':
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-        break;
-      case 'year':
-        startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-        break;
-      default:
-        return 'Tất cả thời gian';
-    }
-    const format = (d) =>
-      `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1)
-        .toString()
-        .padStart(2, '0')}/${d.getFullYear()}`;
-    return `${format(startDate)} – ${format(endDate)}`;
-  };
+  const watchAmount = watch('amount');
 
-  const moneyRangeLabel = getDateRangeLabel(moneyPeriod);
-  const statusRangeLabel = getDateRangeLabel(statusPeriod);
-
-  // Đồng bộ amount khi edit
+  // Đồng bộ displayAmount khi amount thay đổi từ bên ngoài (khi edit)
   useEffect(() => {
-    if (editId && !amountFocused) {
-      const task = tasks.find((t) => t.id === editId);
-      if (task) {
-        const amt = task.amount || 0;
-        setAmountRaw(amt);
-        setAmountDisplay(amt > 0 ? new Intl.NumberFormat('vi-VN').format(amt) : '');
-        setValue('amount', amt);
-      }
+    if (!amountFocused) {
+      setDisplayAmount(watchAmount > 0 ? new Intl.NumberFormat('vi-VN').format(watchAmount) : '');
     }
-  }, [editId, tasks, amountFocused, setValue]);
+  }, [watchAmount, amountFocused]);
 
+  // ==================== FETCH ====================
   const fetchTasks = async () => {
     try {
       setLoading(true);
@@ -171,7 +139,6 @@ const Dashboard = () => {
       fetchMoneyStats();
       fetchStatusStats();
     });
-
     return () => {
       socket.off('task:created');
       socket.off('task:updated');
@@ -187,13 +154,13 @@ const Dashboard = () => {
     fetchStatusStats();
   }, [statusPeriod, tasks]);
 
+  // ==================== FILTER & STATS ====================
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
       const matchesSearch = task.title
         .toLowerCase()
         .includes(searchTerm.toLowerCase());
-      const matchesStatus =
-        filterStatus === 'all' || task.status === filterStatus;
+      const matchesStatus = filterStatus === 'all' || task.status === filterStatus;
       return matchesSearch && matchesStatus;
     });
   }, [tasks, searchTerm, filterStatus]);
@@ -206,9 +173,36 @@ const Dashboard = () => {
     ];
   }, [statusStats]);
 
+  // ==================== DATE LABEL ====================
+  const getDateRangeLabel = (period) => {
+    const now = new Date();
+    const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    let startDate;
+    switch (period) {
+      case 'week':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7);
+        break;
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+        break;
+      case 'year':
+        startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+        break;
+      default:
+        return 'Tất cả thời gian';
+    }
+    const format = (d) =>
+      `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1)
+        .toString()
+        .padStart(2, '0')}/${d.getFullYear()}`;
+    return `${format(startDate)} – ${format(endDate)}`;
+  };
+  const moneyRangeLabel = getDateRangeLabel(moneyPeriod);
+  const statusRangeLabel = getDateRangeLabel(statusPeriod);
+
+  // ==================== FORM HANDLERS ====================
   const onSubmit = async (data) => {
     try {
-      data.amount = amountRaw;
       if (editId) {
         await client.put(`/tasks/${editId}`, data);
         toast.success('Đã cập nhật task!');
@@ -225,8 +219,7 @@ const Dashboard = () => {
         start_time: '',
         end_time: '',
       });
-      setAmountRaw(0);
-      setAmountDisplay('');
+      setDisplayAmount('');
       setEditId(null);
       fetchTasks();
     } catch (err) {
@@ -238,15 +231,22 @@ const Dashboard = () => {
 
   const handleEdit = (task) => {
     setEditId(task.id);
+    // Set tất cả các trường, đảm bảo ngày tháng đúng định dạng
     setValue('title', task.title);
     setValue('description', task.description || '');
     setValue('status', task.status);
-    setValue('task_date', task.task_date || '');
-    setValue('start_time', task.start_time ? task.start_time.slice(0,5) : '');
-    setValue('end_time', task.end_time ? task.end_time.slice(0,5) : '');
+    setValue('amount', task.amount || 0);
+    setValue('task_date', task.task_date ? task.task_date.split('T')[0] : '');
+    setValue('start_time', task.start_time ? task.start_time.slice(0, 5) : '');
+    setValue('end_time', task.end_time ? task.end_time.slice(0, 5) : '');
+
+    // Cập nhật hiển thị tiền
     const amt = task.amount || 0;
-    setAmountRaw(amt);
-    setAmountDisplay(amt > 0 ? new Intl.NumberFormat('vi-VN').format(amt) : '');
+    setDisplayAmount(amt > 0 ? new Intl.NumberFormat('vi-VN').format(amt) : '');
+    setAmountFocused(false);
+
+    // Tự động cuộn lên form
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
   const handleDelete = async (id) => {
@@ -264,6 +264,7 @@ const Dashboard = () => {
     navigate('/login');
   };
 
+  // ==================== FORMAT HELPERS ====================
   const formatCurrency = (value) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
@@ -279,6 +280,7 @@ const Dashboard = () => {
       .padStart(2, '0')}/${d.getFullYear()}`;
   };
 
+  // ==================== RENDER ====================
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-violet-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden transition-colors duration-300">
       <div className="absolute top-0 left-0 w-96 h-96 bg-violet-200 dark:bg-violet-800 rounded-full blur-3xl opacity-30 dark:opacity-20"></div>
@@ -363,7 +365,7 @@ const Dashboard = () => {
           </motion.div>
         </div>
 
-        {/* Pie Chart với thời gian */}
+        {/* Pie Chart */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -385,7 +387,6 @@ const Dashboard = () => {
               <option value="all">Tất cả</option>
             </select>
           </div>
-
           {tasks.length === 0 ? (
             <p className="text-center text-gray-400 dark:text-gray-500 py-8">Chưa có dữ liệu để hiển thị</p>
           ) : (
@@ -415,6 +416,7 @@ const Dashboard = () => {
 
         {/* Form thêm/sửa */}
         <motion.div
+          ref={formRef}
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.3 }}
@@ -446,31 +448,31 @@ const Dashboard = () => {
                   type="text"
                   inputMode="numeric"
                   placeholder="Tiền (VNĐ) - gõ số, tự thêm 000"
-                  value={amountDisplay}
+                  value={displayAmount}
                   onChange={(e) => {
                     const rawValue = e.target.value.replace(/\D/g, '');
                     const baseNum = rawValue === '' ? 0 : parseInt(rawValue, 10);
                     const multiplied = baseNum * 1000;
-                    setAmountRaw(multiplied);
                     setValue('amount', multiplied, { shouldValidate: true });
                     if (amountFocused) {
-                      setAmountDisplay(rawValue);
+                      setDisplayAmount(rawValue);
                     } else {
-                      setAmountDisplay(multiplied > 0 ? new Intl.NumberFormat('vi-VN').format(multiplied) : '');
+                      setDisplayAmount(multiplied > 0 ? new Intl.NumberFormat('vi-VN').format(multiplied) : '');
                     }
                   }}
                   onFocus={() => {
                     setAmountFocused(true);
-                    if (amountRaw === 0) {
-                      setAmountDisplay('');
+                    const current = watch('amount');
+                    if (current === 0) {
+                      setDisplayAmount('');
                     } else {
-                      setAmountDisplay((amountRaw / 1000).toString());
+                      setDisplayAmount(Math.floor(current / 1000).toString());
                     }
                   }}
                   onBlur={() => {
                     setAmountFocused(false);
-                    setAmountDisplay(amountRaw > 0 ? new Intl.NumberFormat('vi-VN').format(amountRaw) : '');
-                    setValue('amount', amountRaw, { shouldValidate: true });
+                    const current = watch('amount');
+                    setDisplayAmount(current > 0 ? new Intl.NumberFormat('vi-VN').format(current) : '');
                   }}
                   className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
                 />
@@ -509,10 +511,10 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="flex items-center gap-4">
               <select
                 {...register('status')}
-                className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
+                className="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
               >
                 <option value="todo">Cần làm</option>
                 <option value="in_progress">Đang làm</option>
@@ -537,8 +539,7 @@ const Dashboard = () => {
                     start_time: '',
                     end_time: '',
                   });
-                  setAmountRaw(0);
-                  setAmountDisplay('');
+                  setDisplayAmount('');
                 }} className="px-4 sm:px-6 py-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-sm sm:text-base">
                   Hủy
                 </button>
@@ -605,7 +606,6 @@ const Dashboard = () => {
                         {task.description && (
                           <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">{task.description}</p>
                         )}
-                        {/* Hiển thị ngày & giờ */}
                         <div className="flex flex-wrap items-center gap-2 mt-1 text-xs text-gray-400 dark:text-gray-500">
                           {task.task_date && (
                             <span className="flex items-center gap-1">
@@ -633,9 +633,7 @@ const Dashboard = () => {
                           {formatCurrency(task.amount)}
                         </span>
                       )}
-                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                        {statusLabels[task.status]}
-                      </span>
+                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{statusLabels[task.status]}</span>
                       <button onClick={() => handleEdit(task)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-800/20 rounded-lg transition-colors"><Edit size={16} /></button>
                       <button onClick={() => handleDelete(task.id)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-800/20 rounded-lg transition-colors"><Trash2 size={16} /></button>
                     </div>
