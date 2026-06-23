@@ -1,9 +1,8 @@
 class Validators {
   static String? email(String? value) {
     if (value == null || value.isEmpty) return 'Vui lòng nhập email';
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-      return 'Email không hợp lệ';
-    }
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    if (!emailRegex.hasMatch(value)) return 'Email không hợp lệ';
     return null;
   }
 
@@ -13,10 +12,9 @@ class Validators {
     return null;
   }
 
-  static String? required(String? value, [String? fieldName]) {
-    if (value == null || value.trim().isEmpty) {
-      return '${fieldName ?? 'Trường này'} không được để trống';
-    }
+  static String? fullName(String? value) {
+    if (value == null || value.isEmpty) return 'Vui lòng nhập họ tên';
+    if (value.length < 2) return 'Họ tên ít nhất 2 ký tự';
     return null;
   }
 }

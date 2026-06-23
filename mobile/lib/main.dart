@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:taskflow_mobile/core/theme/app_theme.dart';
 import 'package:taskflow_mobile/data/datasources/local/shared_prefs_local_datasource.dart';
 import 'package:taskflow_mobile/data/datasources/remote/auth_remote_datasource.dart';
 import 'package:taskflow_mobile/data/datasources/remote/task_remote_datasource.dart';
@@ -23,48 +24,54 @@ import 'package:taskflow_mobile/presentation/providers/user_provider.dart';
 import 'package:taskflow_mobile/presentation/screens/splash/splash_screen.dart';
 
 void main() {
-  // Data Sources
-  final authRemoteDS = AuthRemoteDataSource();
-  final taskRemoteDS = TaskRemoteDataSource();
-  final userRemoteDS = UserRemoteDataSource();
-  final localDS = SharedPrefsLocalDataSource();
+  // Khởi tạo DataSources
+  final localDataSource = SharedPrefsLocalDataSource();
+  final authRemoteDataSource = AuthRemoteDataSource(localDataSource: localDataSource);
+  final taskRemoteDataSource = TaskRemoteDataSource(localDataSource: localDataSource);
+  final userRemoteDataSource = UserRemoteDataSource(localDataSource: localDataSource);
 
-  // Repositories
-  final authRepo = AuthRepositoryImpl(authRemoteDS, localDS);
-  final taskRepo = TaskRepositoryImpl(taskRemoteDS);
-  final userRepo = UserRepositoryImpl(userRemoteDS);
+  // Khởi tạo Repositories
+  final authRepository = AuthRepositoryImpl(remoteDataSource: authRemoteDataSource);
+  final taskRepository = TaskRepositoryImpl(remoteDataSource: taskRemoteDataSource);
+  final userRepository = UserRepositoryImpl(remoteDataSource: userRemoteDataSource);
 
-  // Usecases
-  final loginUC = LoginUseCase(authRepo);
-  final registerUC = RegisterUseCase(authRepo);
-  final googleLoginUC = GoogleLoginUseCase(authRepo);
-  final getTasksUC = GetTasksUseCase(taskRepo);
-  final createTaskUC = CreateTaskUseCase(taskRepo);
-  final updateTaskUC = UpdateTaskUseCase(taskRepo);
-  final deleteTaskUC = DeleteTaskUseCase(taskRepo);
-  final getProfileUC = GetProfileUseCase(userRepo);
-  final updateProfileUC = UpdateProfileUseCase(userRepo);
-  final changePasswordUC = ChangePasswordUseCase(userRepo);
+  // Khởi tạo UseCases
+  final loginUseCase = LoginUseCase(authRepository);
+  final registerUseCase = RegisterUseCase(authRepository);
+  final googleLoginUseCase = GoogleLoginUseCase(authRepository);
+  final getTasksUseCase = GetTasksUseCase(taskRepository);
+  final createTaskUseCase = CreateTaskUseCase(taskRepository);
+  final updateTaskUseCase = UpdateTaskUseCase(taskRepository);
+  final deleteTaskUseCase = DeleteTaskUseCase(taskRepository);
+  final getProfileUseCase = GetProfileUseCase(userRepository);
+  final updateProfileUseCase = UpdateProfileUseCase(userRepository);
+  final changePasswordUseCase = ChangePasswordUseCase(userRepository);
 
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider(
-          loginUseCase: loginUC,
-          registerUseCase: registerUC,
-          googleLoginUseCase: googleLoginUC,
-        )),
-        ChangeNotifierProvider(create: (_) => TaskProvider(
-          getTasksUseCase: getTasksUC,
-          createTaskUseCase: createTaskUC,
-          updateTaskUseCase: updateTaskUC,
-          deleteTaskUseCase: deleteTaskUC,
-        )),
-        ChangeNotifierProvider(create: (_) => UserProvider(
-          getProfileUseCase: getProfileUC,
-          updateProfileUseCase: updateProfileUC,
-          changePasswordUseCase: changePasswordUC,
-        )),
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider(
+            loginUseCase: loginUseCase,
+            registerUseCase: registerUseCase,
+            googleLoginUseCase: googleLoginUseCase,
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => TaskProvider(
+            getTasksUseCase: getTasksUseCase,
+            createTaskUseCase: createTaskUseCase,
+            updateTaskUseCase: updateTaskUseCase,
+            deleteTaskUseCase: deleteTaskUseCase,
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => UserProvider(
+            getProfileUseCase: getProfileUseCase,
+            updateProfileUseCase: updateProfileUseCase,
+            changePasswordUseCase: changePasswordUseCase,
+          ),
+        ),
       ],
       child: const MyApp(),
     ),
@@ -78,13 +85,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'TaskFlow',
-      theme: ThemeData(
-        primarySwatch: Colors.deepPurple,
-        inputDecorationTheme: InputDecorationTheme(
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        ),
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.system,
       home: const SplashScreen(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }

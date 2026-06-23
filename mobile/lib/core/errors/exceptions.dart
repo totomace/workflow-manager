@@ -3,12 +3,7 @@ class ServerException implements Exception {
   ServerException(this.message);
 }
 
-class CacheException implements Exception {
+class UnauthorizedException implements Exception {
   final String message;
-  CacheException(this.message);
-}
-
-class AuthException implements Exception {
-  final String message;
-  AuthException(this.message);
+  UnauthorizedException(this.message);
 }
