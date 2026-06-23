@@ -1,12 +1,12 @@
+// lib/presentation/screens/dashboard/dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:taskflow_mobile/presentation/providers/auth_provider.dart';
 import 'package:taskflow_mobile/presentation/providers/task_provider.dart';
+import 'package:taskflow_mobile/presentation/providers/auth_provider.dart';
+import 'package:taskflow_mobile/presentation/widgets/task_card.dart';
+import 'package:taskflow_mobile/presentation/screens/login/login_screen.dart';
 import 'package:taskflow_mobile/presentation/screens/task_detail/task_detail_screen.dart';
 import 'package:taskflow_mobile/presentation/screens/profile/profile_screen.dart';
-import 'package:taskflow_mobile/presentation/widgets/task_card.dart';
-import 'package:taskflow_mobile/presentation/widgets/stats_card.dart';
-import 'package:taskflow_mobile/domain/entities/task.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -19,6 +19,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    // Tải tasks khi mở màn hình
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<TaskProvider>().fetchTasks();
     });
@@ -31,118 +32,79 @@ class _DashboardScreenState extends State<DashboardScreen> {
         title: const Text('TaskFlow'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
+            icon: const Icon(Icons.person_outline),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen()));
+            },
           ),
           IconButton(
             icon: const Icon(Icons.logout),
-            onPressed: () => context.read<AuthProvider>().logout(),
+            onPressed: () async {
+              await context.read<AuthProvider>().logout();
+              if (!mounted) return;
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+            },
           ),
         ],
       ),
       body: Consumer<TaskProvider>(
-        builder: (_, taskProvider, __) {
+        builder: (context, taskProvider, _) {
           if (taskProvider.loading) {
             return const Center(child: CircularProgressIndicator());
           }
-
           if (taskProvider.error != null) {
-            return Center(child: Text(taskProvider.error!));
+            return Center(child: Text('Lỗi: ${taskProvider.error}'));
           }
-
-          final tasks = taskProvider.tasks;
-
+          if (taskProvider.tasks.isEmpty) {
+            return const Center(child: Text('Chưa có task nào'));
+          }
           return RefreshIndicator(
             onRefresh: () => taskProvider.fetchTasks(),
-            child: ListView(
+            child: ListView.builder(
               padding: const EdgeInsets.all(16),
-              children: [
-                // Stats Cards
-                Row(
-                  children: [
-                    Expanded(
-                      child: StatsCard(
-                        title: 'Tổng task',
-                        value: tasks.length.toString(),
-                        icon: Icons.task_alt,
-                        color: Colors.purple,
+              itemCount: taskProvider.tasks.length,
+              itemBuilder: (context, index) {
+                final task = taskProvider.tasks[index];
+                return TaskCard(
+                  task: task,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => TaskDetailScreen(task: task),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: StatsCard(
-                        title: 'Hoàn thành',
-                        value: tasks.where((t) => t.status == 'done').length.toString(),
-                        icon: Icons.check_circle,
-                        color: Colors.green,
+                    );
+                  },
+                  onDelete: () {
+                    showDialog(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Xóa task'),
+                        content: const Text('Bạn có chắc muốn xóa task này?'),
+                        actions: [
+                          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy')),
+                          TextButton(
+                            onPressed: () {
+                              taskProvider.deleteTask(task.id);
+                              Navigator.pop(ctx);
+                            },
+                            child: const Text('Xóa', style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: StatsCard(
-                        title: 'Đang làm',
-                        value: tasks.where((t) => t.status == 'in_progress').length.toString(),
-                        icon: Icons.hourglass_empty,
-                        color: Colors.orange,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: StatsCard(
-                        title: 'Cần làm',
-                        value: tasks.where((t) => t.status == 'todo').length.toString(),
-                        icon: Icons.radio_button_unchecked,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 24),
-                // Task List Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Danh sách task (${tasks.length})',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add_circle, color: Colors.deepPurple),
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const TaskDetailScreen()),
-                      ).then((_) => taskProvider.fetchTasks()),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                // Task List
-                if (tasks.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(32),
-                    child: Center(child: Text('Chưa có task nào')),
-                  )
-                else
-                  ...tasks.map(
-                    (task) => TaskCard(
-                      task: task,
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => TaskDetailScreen(task: task)),
-                      ).then((_) => taskProvider.fetchTasks()),
-                      onDelete: () async {
-                        await taskProvider.deleteTask(task.id);
-                      },
-                    ),
-                  ),
-              ],
+                    );
+                  },
+                );
+              },
             ),
           );
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const TaskDetailScreen()));
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }

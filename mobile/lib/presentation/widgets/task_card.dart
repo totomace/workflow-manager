@@ -1,74 +1,108 @@
+// lib/presentation/widgets/task_card.dart
 import 'package:flutter/material.dart';
+import 'package:taskflow_mobile/core/utils/formatters.dart';
 import 'package:taskflow_mobile/domain/entities/task.dart';
+import 'package:taskflow_mobile/core/theme/colors.dart';
 
 class TaskCard extends StatelessWidget {
   final TaskEntity task;
-  final VoidCallback onTap;
-  final VoidCallback onDelete;
+  final VoidCallback? onTap;
+  final VoidCallback? onDelete;
 
   const TaskCard({
     super.key,
     required this.task,
-    required this.onTap,
-    required this.onDelete,
+    this.onTap,
+    this.onDelete,
   });
 
-  Color _statusColor() {
+  Color _getStatusColor() {
     switch (task.status) {
-      case 'done':
-        return Colors.green;
+      case 'todo':
+        return AppColors.todo;
       case 'in_progress':
-        return Colors.orange;
+        return AppColors.inProgress;
+      case 'done':
+        return AppColors.done;
       default:
-        return Colors.grey;
+        return AppColors.todo;
     }
   }
 
-  String _statusLabel() {
+  String _getStatusLabel() {
     switch (task.status) {
-      case 'done':
-        return 'Hoàn thành';
+      case 'todo':
+        return 'Cần làm';
       case 'in_progress':
         return 'Đang làm';
+      case 'done':
+        return 'Hoàn thành';
       default:
-        return 'Cần làm';
+        return task.status;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: ListTile(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
         onTap: onTap,
-        title: Text(task.title, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (task.description != null && task.description!.isNotEmpty)
-              Text(task.description!, maxLines: 2, overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 4),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _statusColor().withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: _getStatusColor()),
                   ),
-                  child: Text(_statusLabel(), style: TextStyle(fontSize: 12, color: _statusColor())),
-                ),
-                const SizedBox(width: 8),
-                if (task.amount > 0)
-                  Text('${task.amount}đ', style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.green)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      task.title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  if (task.amount > 0)
+                    Text(
+                      Formatters.currency(task.amount),
+                      style: TextStyle(color: AppColors.money, fontWeight: FontWeight.w500, fontSize: 13),
+                    ),
+                  if (onDelete != null)
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, size: 20),
+                      onPressed: onDelete,
+                      color: Colors.red,
+                    ),
+                ],
+              ),
+              if (task.description != null && task.description!.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(task.description!, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
               ],
-            ),
-          ],
-        ),
-        trailing: IconButton(
-          icon: const Icon(Icons.delete, color: Colors.red),
-          onPressed: onDelete,
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getStatusColor().withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(_getStatusLabel(), style: TextStyle(color: _getStatusColor(), fontSize: 12)),
+                  ),
+                  const Spacer(),
+                  if (task.taskDate != null)
+                    Text(Formatters.date(task.taskDate), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
