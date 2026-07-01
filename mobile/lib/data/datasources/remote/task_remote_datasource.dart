@@ -1,115 +1,99 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../../../core/constants/app_constants.dart';
+import 'package:taskflow_mobile/core/constants/app_constants.dart';
+import 'package:taskflow_mobile/core/utils/agent_debug_log.dart';
+import 'package:taskflow_mobile/data/datasources/local/shared_prefs_local_datasource.dart';
+import 'package:taskflow_mobile/data/models/task_model.dart';
 
-abstract class TaskRemoteDataSource {
-  Future<List<Map<String, dynamic>>> getTasks(String token);
-  Future<Map<String, dynamic>> createTask(String token, Map<String, dynamic> data);
-  Future<Map<String, dynamic>> updateTask(String token, int taskId, Map<String, dynamic> data);
-  Future<void> deleteTask(String token, int taskId);
-  Future<Map<String, dynamic>> getMoneyStats(String token, String period);
-  Future<Map<String, dynamic>> getStatusStats(String token, String period);
-}
+class TaskRemoteDataSource {
+  final SharedPrefsLocalDataSource localDataSource;
+  final String baseUrl = AppConstants.baseUrl;
 
-class TaskRemoteDataSourceImpl implements TaskRemoteDataSource {
-  final http.Client client;
+  TaskRemoteDataSource({required this.localDataSource});
 
-  TaskRemoteDataSourceImpl(this.client);
+  Future<Map<String, String>> _headers() async {
+    final token = await localDataSource.getToken();
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
 
-  @override
-  Future<List<Map<String, dynamic>>> getTasks(String token) async {
-    final response = await client.get(
-      Uri.parse('${AppConstants.baseUrl}/tasks'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
+  Future<List<TaskModel>> getTasks() async {
+    final headers = await _headers();
+    final response = await http.get(
+      Uri.parse('$baseUrl/tasks'),
+      headers: headers,
+    );
+    // #region agent log
+    final token = await localDataSource.getToken();
+    dynamic firstAmount;
+    dynamic firstAmountRuntimeType;
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final list = data['tasks'] as List;
+      if (list.isNotEmpty) {
+        firstAmount = list.first['amount'];
+        firstAmountRuntimeType = firstAmount.runtimeType.toString();
+      }
+    }
+    agentDebugLog(
+      location: 'task_remote_datasource.dart:getTasks',
+      message: 'getTasks response',
+      hypothesisId: 'A,C',
+      data: {
+        'statusCode': response.statusCode,
+        'hasAuthHeader': headers.containsKey('Authorization'),
+        'tokenPresent': token != null,
+        'taskCount': response.statusCode == 200
+            ? (jsonDecode(response.body)['tasks'] as List).length
+            : 0,
+        'firstAmountType': firstAmountRuntimeType,
+        'firstAmountValue': firstAmount?.toString(),
       },
+    );
+    // #endregion
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final list = data['tasks'] as List;
+      return list.map((e) => TaskModel.fromJson(e)).toList();
+    }
+    throw Exception('Failed to load tasks');
+  }
+
+  Future<TaskModel> createTask(Map<String, dynamic> body) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/tasks'),
+      headers: await _headers(),
+      body: jsonEncode(body),
+    );
+    if (response.statusCode == 201) {
+      final data = jsonDecode(response.body);
+      return TaskModel.fromJson(data['task']);
+    }
+    throw Exception(jsonDecode(response.body)['error'] ?? 'Failed to create task');
+  }
+
+  Future<TaskModel> updateTask(int id, Map<String, dynamic> body) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/tasks/$id'),
+      headers: await _headers(),
+      body: jsonEncode(body),
     );
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      return List<Map<String, dynamic>>.from(data['tasks']);
-    } else {
-      throw Exception('Không thể tải danh sách task');
+      return TaskModel.fromJson(data['task']);
     }
+    throw Exception(jsonDecode(response.body)['error'] ?? 'Failed to update task');
   }
 
-  @override
-  Future<Map<String, dynamic>> createTask(String token, Map<String, dynamic> data) async {
-    final response = await client.post(
-      Uri.parse('${AppConstants.baseUrl}/tasks'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(data),
-    );
-    if (response.statusCode == 201) {
-      return jsonDecode(response.body)['task'];
-    } else {
-      throw Exception('Không thể tạo task');
-    }
-  }
-
-  @override
-  Future<Map<String, dynamic>> updateTask(String token, int taskId, Map<String, dynamic> data) async {
-    final response = await client.put(
-      Uri.parse('${AppConstants.baseUrl}/tasks/$taskId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-      body: jsonEncode(data),
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body)['task'];
-    } else {
-      throw Exception('Không thể cập nhật task');
-    }
-  }
-
-  @override
-  Future<void> deleteTask(String token, int taskId) async {
-    final response = await client.delete(
-      Uri.parse('${AppConstants.baseUrl}/tasks/$taskId'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+  Future<void> deleteTask(int id) async {
+    final response = await http.delete(
+      Uri.parse('$baseUrl/tasks/$id'),
+      headers: await _headers(),
     );
     if (response.statusCode != 200) {
-      throw Exception('Không thể xóa task');
-    }
-  }
-
-  @override
-  Future<Map<String, dynamic>> getMoneyStats(String token, String period) async {
-    final response = await client.get(
-      Uri.parse('${AppConstants.baseUrl}/tasks/stats/money?period=$period'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Không thể tải thống kê tiền');
-    }
-  }
-
-  @override
-  Future<Map<String, dynamic>> getStatusStats(String token, String period) async {
-    final response = await client.get(
-      Uri.parse('${AppConstants.baseUrl}/tasks/stats/status?period=$period'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body);
-    } else {
-      throw Exception('Không thể tải thống kê trạng thái');
+      throw Exception('Failed to delete task');
     }
   }
 }

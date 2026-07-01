@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:taskflow_mobile/core/network/socket_service.dart';
 import 'package:taskflow_mobile/core/theme/app_theme.dart';
 import 'package:taskflow_mobile/data/datasources/local/shared_prefs_local_datasource.dart';
 import 'package:taskflow_mobile/data/datasources/remote/auth_remote_datasource.dart';
@@ -30,10 +31,10 @@ void main() {
   final taskRemoteDataSource = TaskRemoteDataSource(localDataSource: localDataSource);
   final userRemoteDataSource = UserRemoteDataSource(localDataSource: localDataSource);
 
-  // Khởi tạo Repositories
-  final authRepository = AuthRepositoryImpl(remoteDataSource: authRemoteDataSource);
-  final taskRepository = TaskRepositoryImpl(remoteDataSource: taskRemoteDataSource);
-  final userRepository = UserRepositoryImpl(remoteDataSource: userRemoteDataSource);
+  // Khởi tạo Repositories (sửa tham số thành `remote` và `local`)
+  final authRepository = AuthRepositoryImpl(remote: authRemoteDataSource, local: localDataSource);
+  final taskRepository = TaskRepositoryImpl(remote: taskRemoteDataSource, local: localDataSource);
+  final userRepository = UserRepositoryImpl(remote: userRemoteDataSource, local: localDataSource);
 
   // Khởi tạo UseCases
   final loginUseCase = LoginUseCase(authRepository);
@@ -47,9 +48,12 @@ void main() {
   final updateProfileUseCase = UpdateProfileUseCase(userRepository);
   final changePasswordUseCase = ChangePasswordUseCase(userRepository);
 
+  final socketService = SocketService();
+
   runApp(
     MultiProvider(
       providers: [
+        Provider<SocketService>.value(value: socketService),
         ChangeNotifierProvider(
           create: (_) => AuthProvider(
             loginUseCase: loginUseCase,

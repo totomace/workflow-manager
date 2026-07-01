@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:taskflow_mobile/core/utils/validators.dart';
+import 'package:taskflow_mobile/core/network/socket_service.dart';
 import 'package:taskflow_mobile/presentation/providers/auth_provider.dart';
+import 'package:taskflow_mobile/presentation/providers/task_provider.dart';
 import 'package:taskflow_mobile/presentation/screens/dashboard/dashboard_screen.dart';
 import 'package:taskflow_mobile/presentation/screens/register/register_screen.dart';
 
@@ -33,6 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       if (!mounted) return;
       if (context.read<AuthProvider>().isLoggedIn) {
+        context.read<SocketService>().connect(context.read<TaskProvider>());
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const DashboardScreen()),

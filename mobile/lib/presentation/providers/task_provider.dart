@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:taskflow_mobile/core/utils/agent_debug_log.dart';
 import 'package:taskflow_mobile/domain/entities/task.dart';
 import 'package:taskflow_mobile/domain/usecases/task/get_tasks_usecase.dart';
 import 'package:taskflow_mobile/domain/usecases/task/create_task_usecase.dart';
@@ -109,5 +110,51 @@ class TaskProvider extends ChangeNotifier {
       _error = e.toString();
       notifyListeners();
     }
+  }
+
+  void applyRemoteCreate(TaskEntity task) {
+    if (_tasks.any((t) => t.id == task.id)) return;
+    _tasks.insert(0, task);
+    // #region agent log
+    agentDebugLog(
+      location: 'task_provider.dart:applyRemoteCreate',
+      message: 'applied remote task create',
+      hypothesisId: 'H',
+      runId: 'post-fix',
+      data: {'taskId': task.id, 'taskCount': _tasks.length},
+    );
+    // #endregion
+    notifyListeners();
+  }
+
+  void applyRemoteUpdate(TaskEntity task) {
+    final index = _tasks.indexWhere((t) => t.id == task.id);
+    if (index == -1) {
+      _tasks.insert(0, task);
+    } else {
+      _tasks[index] = task;
+    }
+    // #region agent log
+    agentDebugLog(
+      location: 'task_provider.dart:applyRemoteUpdate',
+      message: 'applied remote task update',
+      hypothesisId: 'H',
+      data: {'taskId': task.id, 'index': index},
+    );
+    // #endregion
+    notifyListeners();
+  }
+
+  void applyRemoteDelete(int id) {
+    _tasks.removeWhere((t) => t.id == id);
+    // #region agent log
+    agentDebugLog(
+      location: 'task_provider.dart:applyRemoteDelete',
+      message: 'applied remote task delete',
+      hypothesisId: 'H',
+      data: {'taskId': id, 'taskCount': _tasks.length},
+    );
+    // #endregion
+    notifyListeners();
   }
 }

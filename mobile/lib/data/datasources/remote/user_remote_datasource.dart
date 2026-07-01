@@ -1,63 +1,56 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../../../core/constants/app_constants.dart';
+import 'package:taskflow_mobile/core/constants/app_constants.dart';
+import 'package:taskflow_mobile/data/datasources/local/shared_prefs_local_datasource.dart';
+import 'package:taskflow_mobile/data/models/user_model.dart';
 
-abstract class UserRemoteDataSource {
-  Future<Map<String, dynamic>> getProfile(String token);
-  Future<Map<String, dynamic>> updateProfile(String token, String fullName);
-  Future<void> changePassword(String token, String currentPassword, String newPassword);
-}
+class UserRemoteDataSource {
+  final SharedPrefsLocalDataSource localDataSource;
+  final String baseUrl = AppConstants.baseUrl;
 
-class UserRemoteDataSourceImpl implements UserRemoteDataSource {
-  final http.Client client;
+  UserRemoteDataSource({required this.localDataSource});
 
-  UserRemoteDataSourceImpl(this.client);
-
-  @override
-  Future<Map<String, dynamic>> getProfile(String token) async {
-    final response = await client.get(
-      Uri.parse('${AppConstants.baseUrl}/users/me'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
-    );
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body)['user'];
-    } else {
-      throw Exception('Không thể tải thông tin người dùng');
-    }
+  Future<Map<String, String>> _headers() async {
+    final token = await localDataSource.getToken();
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
   }
 
-  @override
-  Future<Map<String, dynamic>> updateProfile(String token, String fullName) async {
-    final response = await client.put(
-      Uri.parse('${AppConstants.baseUrl}/users/me'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+  Future<UserModel> getProfile() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/users/me'),
+      headers: await _headers(),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return UserModel.fromJson(data['user']);
+    }
+    throw Exception('Failed to load profile');
+  }
+
+  Future<UserModel> updateProfile(String fullName) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/users/me'),
+      headers: await _headers(),
       body: jsonEncode({'full_name': fullName}),
     );
     if (response.statusCode == 200) {
-      return jsonDecode(response.body)['user'];
-    } else {
-      throw Exception('Không thể cập nhật hồ sơ');
+      final data = jsonDecode(response.body);
+      return UserModel.fromJson(data['user']);
     }
+    throw Exception(jsonDecode(response.body)['error'] ?? 'Failed to update profile');
   }
 
-  @override
-  Future<void> changePassword(String token, String currentPassword, String newPassword) async {
-    final response = await client.put(
-      Uri.parse('${AppConstants.baseUrl}/users/me/password'),
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      },
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/users/me/password'),
+      headers: await _headers(),
       body: jsonEncode({'currentPassword': currentPassword, 'newPassword': newPassword}),
     );
     if (response.statusCode != 200) {
-      throw Exception(jsonDecode(response.body)['error'] ?? 'Đổi mật khẩu thất bại');
+      throw Exception(jsonDecode(response.body)['error'] ?? 'Failed to change password');
     }
   }
 }
