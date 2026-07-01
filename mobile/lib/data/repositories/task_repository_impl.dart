@@ -16,6 +16,16 @@ class TaskRepositoryImpl implements TaskRepository {
   }
 
   @override
+  Future<double> getMoneyStats({String period = 'all'}) async {
+    return await remote.getMoneyStats(period: period);
+  }
+
+  @override
+  Future<Map<String, int>> getStatusStats({String period = 'all'}) async {
+    return await remote.getStatusStats(period: period);
+  }
+
+  @override
   Future<TaskEntity> createTask({
     required String title,
     String? description,

@@ -1,7 +1,5 @@
-import 'dart:convert';
 import 'package:taskflow_mobile/data/datasources/remote/auth_remote_datasource.dart';
 import 'package:taskflow_mobile/data/datasources/local/shared_prefs_local_datasource.dart';
-import 'package:taskflow_mobile/data/models/user_model.dart';
 import 'package:taskflow_mobile/domain/entities/user.dart';
 import 'package:taskflow_mobile/domain/repositories/auth_repository.dart';
 

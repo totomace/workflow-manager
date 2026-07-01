@@ -1,9 +1,9 @@
-import 'package:intl/intl.dart';
+﻿import 'package:intl/intl.dart';
 
 class Formatters {
   static String currency(double value) {
     final format = NumberFormat('#,##0', 'vi_VN');
-    return '${format.format(value)} ₫';
+    return '${format.format(value)} VND';
   }
 
   static String date(String? dateString) {

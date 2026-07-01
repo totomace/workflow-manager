@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:taskflow_mobile/domain/entities/user.dart';
@@ -80,16 +81,34 @@ class AuthProvider extends ChangeNotifier {
     _user = null;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('is_logged_in');
+    await prefs.remove('token');
     notifyListeners();
   }
 
   Future<bool> tryAutoLogin() async {
     final prefs = await SharedPreferences.getInstance();
-    final isLoggedIn = prefs.getBool('is_logged_in') ?? false;
-    if (isLoggedIn) {
-      // Nếu có token (đã lưu trong SharedPrefs), có thể gọi getProfile để khôi phục user
-      // Nhưng tạm thời để trống, sẽ xử lý sau
+    final token = prefs.getString('token');
+    if (token == null || token.isEmpty) {
+      return false;
     }
+
+    final payload = _decodeJwt(token);
+    final id = payload['id'];
+    final email = payload['email'];
+    if (id is int && email is String && email.isNotEmpty) {
+      _user = User(id: id, email: email, fullName: email);
+      notifyListeners();
+      return true;
+    }
+
     return false;
+  }
+
+  Map<String, dynamic> _decodeJwt(String token) {
+    final parts = token.split('.');
+    if (parts.length != 3) return {};
+    final normalized = base64.normalize(parts[1]);
+    final decoded = utf8.decode(base64Url.decode(normalized));
+    return jsonDecode(decoded) as Map<String, dynamic>;
   }
 }

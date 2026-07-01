@@ -2,6 +2,8 @@ import 'package:taskflow_mobile/domain/entities/task.dart';
 
 abstract class TaskRepository {
   Future<List<TaskEntity>> getTasks();
+  Future<double> getMoneyStats({String period});
+  Future<Map<String, int>> getStatusStats({String period});
   Future<TaskEntity> createTask({
     required String title,
     String? description,

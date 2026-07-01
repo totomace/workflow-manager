@@ -64,7 +64,6 @@ class AuthRemoteDataSource {
     );
     // #endregion
     if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
       // After register, login to get token
       return login(email, password);
     }

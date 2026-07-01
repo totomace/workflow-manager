@@ -13,6 +13,8 @@ import 'package:taskflow_mobile/domain/usecases/auth/login_usecase.dart';
 import 'package:taskflow_mobile/domain/usecases/auth/register_usecase.dart';
 import 'package:taskflow_mobile/domain/usecases/auth/google_login_usecase.dart';
 import 'package:taskflow_mobile/domain/usecases/task/get_tasks_usecase.dart';
+import 'package:taskflow_mobile/domain/usecases/task/get_money_stats_usecase.dart';
+import 'package:taskflow_mobile/domain/usecases/task/get_status_stats_usecase.dart';
 import 'package:taskflow_mobile/domain/usecases/task/create_task_usecase.dart';
 import 'package:taskflow_mobile/domain/usecases/task/update_task_usecase.dart';
 import 'package:taskflow_mobile/domain/usecases/task/delete_task_usecase.dart';
@@ -41,6 +43,8 @@ void main() {
   final registerUseCase = RegisterUseCase(authRepository);
   final googleLoginUseCase = GoogleLoginUseCase(authRepository);
   final getTasksUseCase = GetTasksUseCase(taskRepository);
+  final getMoneyStatsUseCase = GetMoneyStatsUseCase(taskRepository);
+  final getStatusStatsUseCase = GetStatusStatsUseCase(taskRepository);
   final createTaskUseCase = CreateTaskUseCase(taskRepository);
   final updateTaskUseCase = UpdateTaskUseCase(taskRepository);
   final deleteTaskUseCase = DeleteTaskUseCase(taskRepository);
@@ -64,6 +68,8 @@ void main() {
         ChangeNotifierProvider(
           create: (_) => TaskProvider(
             getTasksUseCase: getTasksUseCase,
+            getMoneyStatsUseCase: getMoneyStatsUseCase,
+            getStatusStatsUseCase: getStatusStatsUseCase,
             createTaskUseCase: createTaskUseCase,
             updateTaskUseCase: updateTaskUseCase,
             deleteTaskUseCase: deleteTaskUseCase,

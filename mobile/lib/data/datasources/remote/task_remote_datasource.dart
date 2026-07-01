@@ -61,6 +61,37 @@ class TaskRemoteDataSource {
     throw Exception('Failed to load tasks');
   }
 
+  Future<double> getMoneyStats({String period = 'all'}) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/tasks/stats/money?period=$period'),
+      headers: await _headers(),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final total = data['total'];
+      if (total is num) return total.toDouble();
+      return double.tryParse(total?.toString() ?? '') ?? 0;
+    }
+    throw Exception('Failed to load money stats');
+  }
+
+  Future<Map<String, int>> getStatusStats({String period = 'all'}) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/tasks/stats/status?period=$period'),
+      headers: await _headers(),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final counts = data['counts'] as Map<String, dynamic>? ?? {};
+      return {
+        'todo': (counts['todo'] as num?)?.toInt() ?? 0,
+        'in_progress': (counts['in_progress'] as num?)?.toInt() ?? 0,
+        'done': (counts['done'] as num?)?.toInt() ?? 0,
+      };
+    }
+    throw Exception('Failed to load status stats');
+  }
+
   Future<TaskModel> createTask(Map<String, dynamic> body) async {
     final response = await http.post(
       Uri.parse('$baseUrl/tasks'),

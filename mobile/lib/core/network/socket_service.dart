@@ -1,20 +1,20 @@
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+﻿import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:taskflow_mobile/core/constants/app_constants.dart';
 import 'package:taskflow_mobile/core/utils/agent_debug_log.dart';
 import 'package:taskflow_mobile/data/models/task_model.dart';
 import 'package:taskflow_mobile/presentation/providers/task_provider.dart';
 
 class SocketService {
-  IO.Socket? _socket;
+  io.Socket? _socket;
   TaskProvider? _taskProvider;
   bool _listenersAttached = false;
 
   bool get isConnected => _socket?.connected ?? false;
 
   void connect(TaskProvider taskProvider) {
-    // Luôn cập nhật _taskProvider trước, ngay cả khi socket đã connected.
-    // Bug cũ: return sớm mà không update provider → socket nhận event nhưng
-    // gọi vào provider cũ/null → UI không tự cập nhật.
+    // LuÃ´n cáº­p nháº­t _taskProvider trÆ°á»›c, ngay cáº£ khi socket Ä‘Ã£ connected.
+    // Bug cÅ©: return sá»›m mÃ  khÃ´ng update provider â†’ socket nháº­n event nhÆ°ng
+    // gá»i vÃ o provider cÅ©/null â†’ UI khÃ´ng tá»± cáº­p nháº­t.
     _taskProvider = taskProvider;
 
     if (_socket?.connected == true) {
@@ -44,11 +44,11 @@ class SocketService {
     _socket?.dispose();
     _listenersAttached = false;
 
-    _socket = IO.io(
+    _socket = io.io(
       AppConstants.socketUrl,
-      IO.OptionBuilder()
-          // Ưu tiên websocket trước để có realtime thực sự;
-          // polling chỉ fallback khi websocket không dùng được.
+      io.OptionBuilder()
+          // Æ¯u tiÃªn websocket trÆ°á»›c Ä‘á»ƒ cÃ³ realtime thá»±c sá»±;
+          // polling chá»‰ fallback khi websocket khÃ´ng dÃ¹ng Ä‘Æ°á»£c.
           .setTransports(['websocket', 'polling'])
           .disableAutoConnect()
           .enableReconnection()
@@ -219,3 +219,4 @@ class SocketService {
     }
   }
 }
+
