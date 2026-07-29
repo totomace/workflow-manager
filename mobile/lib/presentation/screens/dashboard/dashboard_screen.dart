@@ -1,4 +1,4 @@
-﻿// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
+// ignore_for_file: prefer_const_constructors, prefer_const_literals_to_create_immutables
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -11,7 +11,8 @@ import 'package:taskflow_mobile/presentation/providers/task_provider.dart';
 import 'package:taskflow_mobile/presentation/screens/login/login_screen.dart';
 import 'package:taskflow_mobile/presentation/screens/profile/profile_screen.dart';
 import 'package:taskflow_mobile/presentation/screens/task_detail/task_detail_screen.dart';
-import 'package:taskflow_mobile/presentation/widgets/stats_card.dart';
+import 'package:taskflow_mobile/presentation/widgets/shimmer.dart';
+import 'package:taskflow_mobile/presentation/widgets/empty_state.dart';
 import 'package:taskflow_mobile/presentation/widgets/task_card.dart';
 
 class DashboardScreen extends StatefulWidget {
@@ -75,13 +76,13 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
   String _periodLabel(String value) {
     switch (value) {
       case 'week':
-        return '7 ngay qua';
+        return '7 ngày qua';
       case 'month':
-        return '30 ngay qua';
+        return '30 ngày qua';
       case 'year':
-        return 'Nam nay';
+        return 'Năm nay';
       default:
-        return 'Tat ca';
+        return 'Tất cả';
     }
   }
 
@@ -108,9 +109,9 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
   Color _statusColor(String status) {
     switch (status) {
       case 'in_progress':
-        return AppColors.inProgress;
+        return AppColors.warning;
       case 'done':
-        return AppColors.done;
+        return AppColors.success;
       case 'todo':
       default:
         return AppColors.todo;
@@ -125,19 +126,24 @@ class _DashboardScreenState extends State<DashboardScreen> with WidgetsBindingOb
   }
 
   Future<void> _confirmDelete(TaskEntity task) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Xoa task'),
-        content: Text('Ban co muon xoa "${task.title}" khong?'),
+        icon: const Icon(Icons.warning_amber_rounded, color: AppColors.error, size: 40),
+        title: const Text('Xóa công việc'),
+        content: Text('Bạn có chắc chắn muốn xóa "${task.title}" không?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Huy'),
+            child: Text(
+              'Hủy',
+              style: TextStyle(color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Xoa', style: TextStyle(color: Colors.red)),
+            child: const Text('Xóa', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

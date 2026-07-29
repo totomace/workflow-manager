@@ -6,8 +6,9 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { profileSchema, passwordSchema } from '../schemas/profileSchema';
 import { motion } from 'framer-motion';
-import { ArrowLeft, User, Lock, CheckCircle, Loader2 } from 'lucide-react';
+import { ArrowLeft, User, Lock, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { Button, Input, Card } from '../components/ui';
 
 const Profile = () => {
   const { user, logout } = useAuth();
@@ -42,7 +43,7 @@ const Profile = () => {
       }
     };
     fetchProfile();
-  }, []);
+  }, [setProfileValue]);
 
   const onUpdateProfile = async (data) => {
     try {
@@ -78,8 +79,8 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-violet-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden transition-colors">
-      <div className="absolute top-0 left-0 w-96 h-96 bg-violet-200 dark:bg-violet-800 rounded-full blur-3xl opacity-30 dark:opacity-20"></div>
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-sky-200 dark:bg-sky-800 rounded-full blur-3xl opacity-30 dark:opacity-20"></div>
+      <div className="absolute top-0 left-0 w-96 h-96 bg-violet-200 dark:bg-violet-800 rounded-full blur-3xl opacity-30 dark:opacity-20" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-sky-200 dark:bg-sky-800 rounded-full blur-3xl opacity-30 dark:opacity-20" />
 
       <div className="relative z-10 max-w-2xl mx-auto px-4 py-8">
         {/* Header */}
@@ -88,13 +89,15 @@ const Profile = () => {
             <ArrowLeft size={20} />
             <span>Quay lại Dashboard</span>
           </Link>
-          <button onClick={handleLogout} className="px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20">
             Đăng xuất
-          </button>
+          </Button>
         </div>
 
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl mb-6">{error}</div>
+          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl mb-6" role="alert">
+            {error}
+          </div>
         )}
 
         {/* Profile Card */}
@@ -114,33 +117,22 @@ const Profile = () => {
           </div>
 
           <form onSubmit={handleProfileSubmit(onUpdateProfile)} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Email</label>
-              <input
-                type="email"
-                value={user?.email}
-                disabled
-                className="w-full px-4 py-3 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-500 dark:text-gray-400 cursor-not-allowed"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Họ tên</label>
-              <input
-                type="text"
-                placeholder="Nhập họ tên"
-                {...registerProfile('full_name')}
-                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
-              />
-              {profileErrors.full_name && <p className="text-red-500 text-xs mt-1">{profileErrors.full_name.message}</p>}
-            </div>
-            <button
-              type="submit"
-              disabled={isProfileSubmitting}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl font-medium shadow-md hover:shadow-lg hover:shadow-violet-200 dark:hover:shadow-violet-900 transition-all disabled:opacity-50"
-            >
-              {isProfileSubmitting ? <Loader2 size={16} className="animate-spin" /> : <User size={16} />}
+            <Input
+              label="Email"
+              type="email"
+              value={user?.email}
+              disabled
+              className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+            />
+            <Input
+              label="Họ tên"
+              placeholder="Nhập họ tên"
+              error={profileErrors.full_name?.message}
+              {...registerProfile('full_name')}
+            />
+            <Button type="submit" disabled={isProfileSubmitting} leftIcon={isProfileSubmitting ? <Loader2 size={16} className="animate-spin" /> : <User size={16} />}>
               Cập nhật hồ sơ
-            </button>
+            </Button>
           </form>
         </motion.div>
 
@@ -153,34 +145,23 @@ const Profile = () => {
         >
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-4">Đổi mật khẩu</h2>
           <form onSubmit={handlePasswordSubmit(onChangePassword)} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mật khẩu hiện tại</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                {...registerPassword('currentPassword')}
-                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
-              />
-              {passwordErrors.currentPassword && <p className="text-red-500 text-xs mt-1">{passwordErrors.currentPassword.message}</p>}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Mật khẩu mới</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                {...registerPassword('newPassword')}
-                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
-              />
-              {passwordErrors.newPassword && <p className="text-red-500 text-xs mt-1">{passwordErrors.newPassword.message}</p>}
-            </div>
-            <button
-              type="submit"
-              disabled={isPasswordSubmitting}
-              className="inline-flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl font-medium shadow-md hover:shadow-lg hover:shadow-violet-200 dark:hover:shadow-violet-900 transition-all disabled:opacity-50"
-            >
-              {isPasswordSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}
+            <Input
+              label="Mật khẩu hiện tại"
+              type="password"
+              placeholder="••••••••"
+              error={passwordErrors.currentPassword?.message}
+              {...registerPassword('currentPassword')}
+            />
+            <Input
+              label="Mật khẩu mới"
+              type="password"
+              placeholder="••••••••"
+              error={passwordErrors.newPassword?.message}
+              {...registerPassword('newPassword')}
+            />
+            <Button type="submit" disabled={isPasswordSubmitting} leftIcon={isPasswordSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Lock size={16} />}>
               Đổi mật khẩu
-            </button>
+            </Button>
           </form>
         </motion.div>
       </div>

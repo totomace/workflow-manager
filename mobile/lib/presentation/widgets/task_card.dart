@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+// lib/presentation/widgets/task_card.dart
+import 'package:flutter/material.dart';
 import 'package:taskflow_mobile/core/theme/app_colors.dart';
 import 'package:taskflow_mobile/core/utils/formatters.dart';
 import 'package:taskflow_mobile/domain/entities/task.dart';
@@ -7,100 +8,139 @@ class TaskCard extends StatelessWidget {
   final TaskEntity task;
   final VoidCallback? onTap;
   final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
 
   const TaskCard({
     super.key,
     required this.task,
     this.onTap,
     this.onDelete,
+    this.onEdit,
   });
 
-  Color _statusColor() {
+  IconData _getStatusIcon() {
     switch (task.status) {
+      case 'todo':
+        return Icons.radio_button_unchecked_rounded;
+      case 'in_progress':
+        return Icons.schedule_rounded;
+      case 'done':
+        return Icons.check_circle_rounded;
+      default:
+        return Icons.radio_button_unchecked_rounded;
+    }
+  }
+
+  Color _getStatusColor() {
+    switch (task.status) {
+      case 'todo':
+        return AppColors.todo;
       case 'in_progress':
         return AppColors.inProgress;
       case 'done':
         return AppColors.done;
-      case 'todo':
       default:
         return AppColors.todo;
     }
   }
 
-  LinearGradient _statusGradient() {
+  String _getStatusLabel() {
     switch (task.status) {
-      case 'in_progress':
-        return AppColors.inProgressGradient;
-      case 'done':
-        return AppColors.doneGradient;
       case 'todo':
+        return 'Cần làm';
+      case 'in_progress':
+        return 'Đang làm';
+      case 'done':
+        return 'Hoàn thành';
       default:
-        return AppColors.todoGradient;
+        return task.status;
     }
   }
 
-  String _statusLabel() {
-    switch (task.status) {
-      case 'in_progress':
-        return 'Dang lam';
-      case 'done':
-        return 'Hoan thanh';
-      case 'todo':
-      default:
-        return 'Can lam';
+  Color _getStatusBgColor(bool isDark) {
+    if (isDark) {
+      switch (task.status) {
+        case 'todo':
+          return AppColors.todoBgDark;
+        case 'in_progress':
+          return AppColors.inProgressBgDark;
+        case 'done':
+          return AppColors.doneBgDark;
+        default:
+          return AppColors.todoBgDark;
+      }
+    } else {
+      switch (task.status) {
+        case 'todo':
+          return AppColors.todoBg;
+        case 'in_progress':
+          return AppColors.inProgressBg;
+        case 'done':
+          return AppColors.doneBg;
+        default:
+          return AppColors.todoBg;
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final background = isDark ? AppColors.darkCard : AppColors.lightCard;
-    final borderColor = isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder;
+    final statusColor = _getStatusColor();
 
-    return Card(
-      margin: EdgeInsets.zero,
-      color: background,
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : AppColors.lightCard,
         borderRadius: BorderRadius.circular(20),
-        side: BorderSide(color: borderColor),
+        border: Border.all(
+          color: isDark ? AppColors.darkCardBorder : AppColors.lightCardBorder,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.05 : 0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      gradient: _statusGradient(),
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: const Icon(Icons.task_alt, color: Colors.white, size: 22),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Status Icon
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Icon(
+                    _getStatusIcon(),
+                    color: statusColor,
+                    size: 20,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          task.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                        ),
+                ),
+                const SizedBox(width: 12),
+                // Title and Info
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        task.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? AppColors.textLight : AppColors.textPrimary,
+                            ),
+                      ),
+                      if (task.description != null && task.description!.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
-                          task.description?.isNotEmpty == true ? task.description! : 'No description',
+                          task.description!,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -108,76 +148,130 @@ class TaskCard extends StatelessWidget {
                               ),
                         ),
                       ],
-                    ),
+                      const SizedBox(height: 8),
+                      // Meta details (Date, Start Time, End Time)
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          if (task.taskDate != null && task.taskDate!.isNotEmpty)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.calendar_today_rounded,
+                                  size: 12,
+                                  color: isDark ? AppColors.textDarkSecondary : AppColors.textMuted,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  Formatters.date(task.taskDate),
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: isDark ? AppColors.textDarkSecondary : AppColors.textMuted,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          if (task.startTime != null && task.startTime!.isNotEmpty)
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.access_time_rounded,
+                                  size: 12,
+                                  color: isDark ? AppColors.textDarkSecondary : AppColors.textMuted,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  task.startTime!.substring(0, 5),
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        color: isDark ? AppColors.textDarkSecondary : AppColors.textMuted,
+                                      ),
+                                ),
+                                if (task.endTime != null && task.endTime!.isNotEmpty) ...[
+                                  Text(
+                                    ' → ',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: isDark ? AppColors.textDarkSecondary : AppColors.textMuted,
+                                    ),
+                                  ),
+                                  Text(
+                                    task.endTime!.substring(0, 5),
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: isDark ? AppColors.textDarkSecondary : AppColors.textMuted,
+                                        ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                        ],
+                      ),
+                    ],
                   ),
-                  if (task.amount > 0)
+                ),
+                const SizedBox(width: 8),
+                // Actions & Status / Amount
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (task.amount > 0)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Text(
+                          Formatters.currency(task.amount),
+                          style: TextStyle(
+                            color: isDark ? AppColors.moneyDark : AppColors.money,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: AppColors.money.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(999),
+                        color: _getStatusBgColor(isDark),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        Formatters.currency(task.amount),
-                        style: const TextStyle(
-                          color: AppColors.money,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
+                        _getStatusLabel(),
+                        style: TextStyle(
+                          color: statusColor,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
-                  if (onDelete != null)
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints.tightFor(width: 36, height: 36),
-                      icon: const Icon(Icons.delete_outline, size: 20),
-                      onPressed: onDelete,
-                      color: Colors.redAccent,
-                    ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: _statusColor().withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: _statusColor().withValues(alpha: 0.18)),
-                    ),
-                    child: Text(
-                      _statusLabel(),
-                      style: TextStyle(
-                        color: _statusColor(),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (task.taskDate != null)
-                    Text(
-                      Formatters.date(task.taskDate),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (onEdit != null)
+                          IconButton(
+                            icon: const Icon(Icons.edit_outlined, size: 18),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: onEdit,
                             color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
+                            splashRadius: 16,
                           ),
-                    ),
-                  const Spacer(),
-                  if (task.startTime != null || task.endTime != null)
-                    Text(
-                      [
-                        if (task.startTime != null) task.startTime!.substring(0, 5),
-                        if (task.startTime != null && task.endTime != null) ' - ',
-                        if (task.endTime != null) task.endTime!.substring(0, 5),
-                      ].join(),
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: isDark ? AppColors.textDarkSecondary : AppColors.textSecondary,
+                        if (onEdit != null && onDelete != null) const SizedBox(width: 8),
+                        if (onDelete != null)
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: onDelete,
+                            color: AppColors.error,
+                            splashRadius: 16,
                           ),
+                      ],
                     ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

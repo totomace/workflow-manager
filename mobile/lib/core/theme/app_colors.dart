@@ -6,6 +6,16 @@ class AppColors {
   static const Color primaryDark = Color(0xFF5B21B6);
   static const Color secondary = Color(0xFF4F46E5);
 
+  static const Color success = Color(0xFF10B981);
+  static const Color warning = Color(0xFFF59E0B);
+  static const Color error = Color(0xFFEF4444);
+  static const Color info = Color(0xFF0EA5E9);
+  static const Color surface = Color(0xFFFFFFFF);
+  static const Color background = Color(0xFFF0F9FF);
+  static const Color cardLight = Color(0xFFFFFFFF);
+  static const Color cardDark = Color(0xFF1F2937);
+  static const Color divider = Color(0xFFE5E7EB);
+
   static const Color lightBg = Color(0xFFF0F9FF);
   static const Color darkBg = Color(0xFF111827);
   static const Color lightBgStart = Color(0xFFF0F9FF);
@@ -46,7 +56,6 @@ class AppColors {
 
   static const Color money = Color(0xFF10B981);
   static const Color moneyDark = Color(0xFF34D399);
-  static const Color error = Color(0xFFEF4444);
 
   static const Color inputFill = Color(0xFFF9FAFB);
   static const Color inputFillDark = Color(0xFF374151);

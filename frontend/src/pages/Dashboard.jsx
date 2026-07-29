@@ -15,17 +15,21 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { taskSchema } from '../schemas/taskSchema';
 import socket from '../socket';
-
-const statusIcons = {
-  todo: <Circle size={16} className="text-gray-400 dark:text-gray-500" />,
-  in_progress: <Clock size={16} className="text-amber-500" />,
-  done: <CheckCircle size={16} className="text-emerald-500" />,
-};
+import {
+  Button, Input, Card, Badge, Select, Skeleton,
+  EmptyState, Modal, Avatar
+} from '../components/ui';
 
 const statusLabels = {
   todo: 'Cần làm',
   in_progress: 'Đang làm',
   done: 'Hoàn thành',
+};
+
+const statusVariants = {
+  todo: 'todo',
+  in_progress: 'progress',
+  done: 'done',
 };
 
 const COLORS = {
@@ -38,6 +42,7 @@ const Dashboard = () => {
   const { user, logout } = useAuth();
   const { darkMode, toggleDarkMode } = useDarkMode();
   const navigate = useNavigate();
+
   const [tasks, setTasks] = useState([]);
   const [editId, setEditId] = useState(null);
   const [error, setError] = useState('');
@@ -45,13 +50,16 @@ const Dashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [moneyPeriod, setMoneyPeriod] = useState('month');
-  const [totalMoney, setTotalMoney] = useState(0);
   const [statusPeriod, setStatusPeriod] = useState('month');
+  const [totalMoney, setTotalMoney] = useState(0);
   const [statusStats, setStatusStats] = useState({ todo: 0, in_progress: 0, done: 0 });
 
   const [displayAmount, setDisplayAmount] = useState('');
   const [amountFocused, setAmountFocused] = useState(false);
   const formRef = useRef(null);
+
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteTaskId, setDeleteTaskId] = useState(null);
 
   const {
     register,
@@ -88,7 +96,6 @@ const Dashboard = () => {
     }
   };
 
-  // Hàm fetch nhận tham số period, không dùng state
   const fetchMoneyStats = async (period) => {
     try {
       const res = await client.get(`/tasks/stats/money?period=${period || moneyPeriod}`);
@@ -109,13 +116,11 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchTasks();
-    // Gọi lần đầu với giá trị mặc định (month)
     fetchMoneyStats('month');
     fetchStatusStats('month');
 
     socket.on('task:created', (newTask) => {
       setTasks((prev) => [newTask, ...prev]);
-      // Khi có task mới, fetch lại thống kê với period hiện tại (dùng state)
       fetchMoneyStats(moneyPeriod);
       fetchStatusStats(statusPeriod);
       toast.success('Có task mới được tạo!');
@@ -137,7 +142,7 @@ const Dashboard = () => {
       socket.off('task:updated');
       socket.off('task:deleted');
     };
-  }, []); // Chỉ chạy một lần khi mount
+  }, []);
 
   // ==================== FILTER & STATS ====================
   const filteredTasks = useMemo(() => {
@@ -206,7 +211,6 @@ const Dashboard = () => {
       setDisplayAmount('');
       setEditId(null);
       fetchTasks();
-      // Cập nhật lại thống kê sau khi thêm/sửa
       fetchMoneyStats(moneyPeriod);
       fetchStatusStats(statusPeriod);
     } catch (err) {
@@ -233,15 +237,24 @@ const Dashboard = () => {
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  const handleDelete = async (id) => {
+  const handleDeleteClick = (id) => {
+    setDeleteTaskId(id);
+    setDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteTaskId) return;
     try {
-      await client.delete(`/tasks/${id}`);
+      await client.delete(`/tasks/${deleteTaskId}`);
       toast.success('Đã xóa task!');
       fetchTasks();
       fetchMoneyStats(moneyPeriod);
       fetchStatusStats(statusPeriod);
     } catch (err) {
       toast.error('Xóa thất bại');
+    } finally {
+      setDeleteModalOpen(false);
+      setDeleteTaskId(null);
     }
   };
 
@@ -268,8 +281,8 @@ const Dashboard = () => {
   // ==================== RENDER ====================
   return (
     <div className="min-h-screen bg-gradient-to-br from-sky-50 via-white to-violet-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 relative overflow-hidden transition-colors duration-300">
-      <div className="absolute top-0 left-0 w-96 h-96 bg-violet-200 dark:bg-violet-800 rounded-full blur-3xl opacity-30 dark:opacity-20"></div>
-      <div className="absolute bottom-0 right-0 w-96 h-96 bg-sky-200 dark:bg-sky-800 rounded-full blur-3xl opacity-30 dark:opacity-20"></div>
+      <div className="absolute top-0 left-0 w-96 h-96 bg-violet-200 dark:bg-violet-800 rounded-full blur-3xl opacity-30 dark:opacity-20" />
+      <div className="absolute bottom-0 right-0 w-96 h-96 bg-sky-200 dark:bg-sky-800 rounded-full blur-3xl opacity-30 dark:opacity-20" />
 
       <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
@@ -279,21 +292,24 @@ const Dashboard = () => {
             <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">{user?.email}</p>
           </div>
           <div className="flex items-center gap-2 self-end sm:self-auto">
-            <button onClick={toggleDarkMode} className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <Button variant="ghost" size="sm" onClick={toggleDarkMode} aria-label={darkMode ? 'Chế độ sáng' : 'Chế độ tối'}>
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
-            <Link to="/profile" className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-              <User size={18} />
+            </Button>
+            <Link to="/profile">
+              <Button variant="ghost" size="sm" aria-label="Hồ sơ">
+                <User size={18} />
+              </Button>
             </Link>
-            <button onClick={handleLogout} className="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">
-              <LogOut size={18} />
+            <Button variant="ghost" size="md" onClick={handleLogout} leftIcon={<LogOut size={18} />}>
               <span className="hidden sm:inline">Đăng xuất</span>
-            </button>
+            </Button>
           </div>
         </div>
 
         {error && (
-          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl mb-4 sm:mb-6 text-sm">{error}</div>
+          <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-700 text-red-700 dark:text-red-300 px-4 py-3 rounded-xl mb-4 sm:mb-6 text-sm" role="alert">
+            {error}
+          </div>
         )}
 
         {/* Stats Cards */}
@@ -336,20 +352,21 @@ const Dashboard = () => {
                 </p>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{moneyRangeLabel}</p>
               </div>
-              <select
+              <Select
                 value={moneyPeriod}
-                onChange={(e) => {
+                onValueChange={(e) => {
                   const newPeriod = e.target.value;
                   setMoneyPeriod(newPeriod);
                   fetchMoneyStats(newPeriod);
                 }}
+                options={[
+                  { value: 'week', label: '7 ngày qua' },
+                  { value: 'month', label: '30 ngày qua' },
+                  { value: 'year', label: 'Năm nay' },
+                  { value: 'all', label: 'Tất cả' },
+                ]}
                 className="mt-3 px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer self-start"
-              >
-                <option value="week">7 ngày qua</option>
-                <option value="month">30 ngày qua</option>
-                <option value="year">Năm nay</option>
-                <option value="all">Tất cả</option>
-              </select>
+              />
             </div>
           </motion.div>
         </div>
@@ -365,20 +382,21 @@ const Dashboard = () => {
               <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Thống kê trạng thái</h2>
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">{statusRangeLabel}</p>
             </div>
-            <select
+            <Select
               value={statusPeriod}
-              onChange={(e) => {
+              onValueChange={(e) => {
                 const newPeriod = e.target.value;
                 setStatusPeriod(newPeriod);
                 fetchStatusStats(newPeriod);
               }}
+              options={[
+                { value: 'week', label: '7 ngày qua' },
+                { value: 'month', label: '30 ngày qua' },
+                { value: 'year', label: 'Năm nay' },
+                { value: 'all', label: 'Tất cả' },
+              ]}
               className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
-            >
-              <option value="week">7 ngày qua</option>
-              <option value="month">30 ngày qua</option>
-              <option value="year">Năm nay</option>
-              <option value="all">Tất cả</option>
-            </select>
+            />
           </div>
           {tasks.length === 0 ? (
             <p className="text-center text-gray-400 dark:text-gray-500 py-8">Chưa có dữ liệu để hiển thị</p>
@@ -420,23 +438,20 @@ const Dashboard = () => {
           </h2>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <Input
+                label="Tiêu đề"
+                placeholder="Tiêu đề"
+                error={errors.title?.message}
+                {...register('title')}
+              />
+              <Input
+                label="Mô tả"
+                placeholder="Mô tả"
+                error={errors.description?.message}
+                {...register('description')}
+              />
               <div>
-                <input
-                  placeholder="Tiêu đề"
-                  {...register('title')}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
-                />
-                {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title.message}</p>}
-              </div>
-              <div>
-                <input
-                  placeholder="Mô tả"
-                  {...register('description')}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
-                />
-                {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description.message}</p>}
-              </div>
-              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Tiền (VNĐ)</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -475,53 +490,43 @@ const Dashboard = () => {
 
             {/* Ngày & Giờ */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Ngày làm</label>
-                <input
-                  type="date"
-                  {...register('task_date')}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
-                />
-                {errors.task_date && <p className="text-red-500 text-xs mt-1">{errors.task_date.message}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Giờ bắt đầu</label>
-                <input
-                  type="time"
-                  {...register('start_time')}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
-                />
-                {errors.start_time && <p className="text-red-500 text-xs mt-1">{errors.start_time.message}</p>}
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Giờ kết thúc</label>
-                <input
-                  type="time"
-                  {...register('end_time')}
-                  className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
-                />
-                {errors.end_time && <p className="text-red-500 text-xs mt-1">{errors.end_time.message}</p>}
-              </div>
+              <Input
+                label="Ngày làm"
+                type="date"
+                error={errors.task_date?.message}
+                {...register('task_date')}
+              />
+              <Input
+                label="Giờ bắt đầu"
+                type="time"
+                error={errors.start_time?.message}
+                {...register('start_time')}
+              />
+              <Input
+                label="Giờ kết thúc"
+                type="time"
+                error={errors.end_time?.message}
+                {...register('end_time')}
+              />
             </div>
 
-            <div className="flex items-center gap-4">
-              <select
-                {...register('status')}
-                className="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
-              >
-                <option value="todo">Cần làm</option>
-                <option value="in_progress">Đang làm</option>
-                <option value="done">Hoàn thành</option>
-              </select>
-            </div>
+            <Select
+              value={watch('status')}
+              onValueChange={(e) => setValue('status', e.target.value)}
+              options={[
+                { value: 'todo', label: 'Cần làm' },
+                { value: 'in_progress', label: 'Đang làm' },
+                { value: 'done', label: 'Hoàn thành' },
+              ]}
+              className="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm sm:text-base text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
+            />
 
             <div className="flex gap-2">
-              <button type="submit" className="inline-flex items-center gap-2 px-4 sm:px-6 py-2.5 bg-gradient-to-r from-violet-600 to-indigo-600 text-white rounded-xl font-medium shadow-md hover:shadow-lg hover:shadow-violet-200 dark:hover:shadow-violet-900 transition-all text-sm sm:text-base">
-                {editId ? <Edit size={16} /> : <Plus size={16} />}
+              <Button type="submit" leftIcon={editId ? <Edit size={16} /> : <Plus size={16} />}>
                 {editId ? 'Cập nhật' : 'Thêm mới'}
-              </button>
+              </Button>
               {editId && (
-                <button type="button" onClick={() => {
+                <Button type="button" variant="ghost" onClick={() => {
                   setEditId(null);
                   reset({
                     title: '',
@@ -533,16 +538,16 @@ const Dashboard = () => {
                     end_time: '',
                   });
                   setDisplayAmount('');
-                }} className="px-4 sm:px-6 py-2.5 text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-white border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all text-sm sm:text-base">
+                }}>
                   Hủy
-                </button>
+                </Button>
               )}
             </div>
           </form>
         </motion.div>
 
         {/* Danh sách task */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 transition-colors">
+        <Card>
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
             <h2 className="text-lg font-semibold text-gray-800 dark:text-white">Danh sách task ({filteredTasks.length})</h2>
             <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 w-full sm:w-auto">
@@ -556,30 +561,24 @@ const Dashboard = () => {
                   className="pl-10 pr-4 py-2 w-full sm:w-48 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-400 focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all"
                 />
               </div>
-              <div className="relative">
-                <Filter size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-                <select
-                  value={filterStatus}
-                  onChange={(e) => setFilterStatus(e.target.value)}
-                  className="pl-10 pr-4 py-2 w-full sm:w-auto bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all appearance-none cursor-pointer"
-                >
-                  <option value="all">Tất cả trạng thái</option>
-                  <option value="todo">Cần làm</option>
-                  <option value="in_progress">Đang làm</option>
-                  <option value="done">Hoàn thành</option>
-                </select>
-              </div>
+              <Select
+                value={filterStatus}
+                onValueChange={(e) => setFilterStatus(e.target.value)}
+                options={[
+                  { value: 'all', label: 'Tất cả trạng thái' },
+                  { value: 'todo', label: 'Cần làm' },
+                  { value: 'in_progress', label: 'Đang làm' },
+                  { value: 'done', label: 'Hoàn thành' },
+                ]}
+                className="pl-10 pr-4 py-2 w-full sm:w-auto bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white focus:bg-white dark:focus:bg-gray-600 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 outline-none transition-all appearance-none cursor-pointer"
+              />
             </div>
           </div>
 
           {loading ? (
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (<TaskSkeleton key={i} />))}
-            </div>
+            <SkeletonList count={3} hasAvatar={true} hasAction={true} />
           ) : filteredTasks.length === 0 ? (
-            <div className="text-center py-12 text-gray-400 dark:text-gray-500">
-              <p>{tasks.length === 0 ? 'Chưa có task nào. Hãy tạo task đầu tiên!' : 'Không tìm thấy task phù hợp.'}</p>
-            </div>
+            <EmptyTasks onCreate={() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
           ) : (
             <div className="space-y-3">
               <AnimatePresence>
@@ -593,7 +592,9 @@ const Dashboard = () => {
                     className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border border-gray-100 dark:border-gray-700 hover:border-violet-200 dark:hover:border-violet-600 hover:bg-violet-50/30 dark:hover:bg-violet-800/10 transition-colors"
                   >
                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                      {statusIcons[task.status]}
+                      <Badge variant={statusVariants[task.status]} dot>
+                        {statusLabels[task.status]}
+                      </Badge>
                       <div className="min-w-0 flex-1">
                         <h3 className="font-medium text-gray-900 dark:text-white truncate">{task.title}</h3>
                         {task.description && (
@@ -609,13 +610,11 @@ const Dashboard = () => {
                           {task.start_time && (
                             <span className="flex items-center gap-1">
                               <Clock size={12} />
-                              {task.start_time.slice(0,5)}
+                              {task.start_time.slice(0, 5)}
                             </span>
                           )}
                           {task.end_time && (
-                            <span className="flex items-center gap-1">
-                              → {task.end_time.slice(0,5)}
-                            </span>
+                            <span className="flex items-center gap-1">→ {task.end_time.slice(0, 5)}</span>
                           )}
                         </div>
                       </div>
@@ -626,16 +625,30 @@ const Dashboard = () => {
                           {formatCurrency(task.amount)}
                         </span>
                       )}
-                      <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">{statusLabels[task.status]}</span>
-                      <button onClick={() => handleEdit(task)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-violet-600 dark:hover:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-800/20 rounded-lg transition-colors"><Edit size={16} /></button>
-                      <button onClick={() => handleDelete(task.id)} className="p-1.5 text-gray-400 dark:text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-800/20 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(task)}>
+                        <Edit size={16} />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClick(task.id)}>
+                        <Trash2 size={16} />
+                      </Button>
                     </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
             </div>
           )}
-        </div>
+        </Card>
+
+        {/* Delete Confirm Modal */}
+        <Modal
+          isOpen={deleteModalOpen}
+          onClose={() => setDeleteModalOpen(false)}
+          title="Xóa task"
+          message="Bạn có chắc chắn muốn xóa task này? Hành động này không thể hoàn tác."
+          onConfirm={handleDeleteConfirm}
+          confirmText="Xóa"
+          variant="danger"
+        />
       </div>
     </div>
   );
