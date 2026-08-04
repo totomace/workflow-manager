@@ -9,7 +9,7 @@ exports.create = async (req, res) => {
       { title, description, status, amount, task_date, start_time, end_time },
       req.user.id
     );
-    getIO().emit('task:created', task);
+    getIO().to(req.user.id.toString()).emit('task:created', task);
     res.status(201).json({ success: true, task });
   } catch (err) {
     console.error(err);
@@ -48,7 +48,7 @@ exports.update = async (req, res) => {
       title, description, status, amount, task_date, start_time, end_time
     });
     if (!task) return res.status(404).json({ error: 'Task not found or forbidden' });
-    getIO().emit('task:updated', task);
+    getIO().to(req.user.id.toString()).emit('task:updated', task);
     res.json({ success: true, task });
   } catch (err) {
     console.error(err);
@@ -60,7 +60,7 @@ exports.delete = async (req, res) => {
   try {
     const task = await tasksService.delete(req.params.id, req.user.id);
     if (!task) return res.status(404).json({ error: 'Task not found or forbidden' });
-    getIO().emit('task:deleted', { id: req.params.id });
+    getIO().to(req.user.id.toString()).emit('task:deleted', { id: req.params.id });
     res.json({ success: true, message: 'Task deleted' });
   } catch (err) {
     console.error(err);
