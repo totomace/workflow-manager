@@ -128,3 +128,61 @@ export function deepClone<T>(obj: T): T {
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+// JWT utilities
+export interface JWTPayload {
+  id: number;
+  email: string;
+  iat?: number;
+  exp?: number;
+  [key: string]: unknown;
+}
+
+/**
+ * Decode JWT token without verification (client-side only)
+ * Handles base64url encoding used in JWT
+ */
+export function decodeJWT(token: string): JWTPayload | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+
+    // Decode base64url (JWT uses base64url, not standard base64)
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=');
+    const json = atob(padded);
+    return JSON.parse(json) as JWTPayload;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if JWT token is expired
+ */
+export function isTokenExpired(token: string): boolean {
+  const payload = decodeJWT(token);
+  if (!payload || !payload.exp) return true;
+
+  const now = Math.floor(Date.now() / 1000);
+  return payload.exp < now;
+}
+
+/**
+ * Get token expiry date
+ */
+export function getTokenExpiry(token: string): Date | null {
+  const payload = decodeJWT(token);
+  if (!payload || !payload.exp) return null;
+  return new Date(payload.exp * 1000);
+}
+
+/**
+ * Get time until token expiry in milliseconds
+ */
+export function getTimeUntilExpiry(token: string): number {
+  const expiry = getTokenExpiry(token);
+  if (!expiry) return 0;
+  return Math.max(0, expiry.getTime() - Date.now());
+}

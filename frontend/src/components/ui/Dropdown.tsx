@@ -1,6 +1,6 @@
 import { forwardRef, useRef, useEffect, useState, type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
-import { X, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 interface DropdownOption {
   value: string;
@@ -12,7 +12,6 @@ interface DropdownOption {
 }
 
 interface DropdownProps {
-  trigger: ReactNode;
   options: DropdownOption[];
   onSelect?: (value: string, option: DropdownOption) => void;
   placeholder?: string;
@@ -24,6 +23,9 @@ interface DropdownProps {
   maxHeight?: number;
   searchable?: boolean;
   searchPlaceholder?: string;
+  // Controlled mode props
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export const Dropdown = forwardRef<HTMLDivElement, DropdownProps>(

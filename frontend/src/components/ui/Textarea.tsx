@@ -1,7 +1,13 @@
 import { forwardRef } from 'react';
 import { cn } from '../../lib/utils';
 
-const Textarea = forwardRef<HTMLTextAreaElement, React.TextareaHTMLAttributes<HTMLTextAreaElement>>(
+interface TextareaProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label?: string;
+  error?: string;
+  helperText?: string;
+}
+
+const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
   ({ className, label, error, helperText, ...props }, ref) => {
     const textareaId = props.id || `textarea-${Math.random().toString(36).slice(2, 9)}`;
     const errorId = `${textareaId}-error`;

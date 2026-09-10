@@ -1,0 +1,10 @@
+// Dashboard Components - Barrel export
+export { DashboardHeader } from './DashboardHeader';
+export { MetricCards } from './MetricCards';
+export { MoneyStatsCard } from './MoneyStatsCard';
+export { StatusStatsSection } from './StatusStatsSection';
+export { TaskForm } from './TaskForm';
+export { TaskSearchFilter } from './TaskSearchFilter';
+export { TaskList } from './TaskList';
+export { TaskItem } from './TaskItem';
+export { DeleteConfirmModal } from './DeleteConfirmModal';

@@ -1,7 +1,15 @@
 import { forwardRef } from 'react';
 import { cn } from '../../lib/utils';
 
-const Input = forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement>>(
+interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  label?: string;
+  error?: string;
+  helperText?: string;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
+}
+
+const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, type = 'text', label, error, helperText, leftIcon, rightIcon, ...props }, ref) => {
     const inputId = props.id || `input-${Math.random().toString(36).slice(2, 9)}`;
     const errorId = `${inputId}-error`;

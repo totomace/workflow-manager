@@ -1,44 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api/client';
-
-// Types
-export interface Task {
-  id: number;
-  title: string;
-  description?: string;
-  status: 'todo' | 'in_progress' | 'done';
-  amount?: number;
-  task_date?: string;
-  start_time?: string;
-  end_time?: string;
-  user_id: number;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TaskStats {
-  todo: number;
-  in_progress: number;
-  done: number;
-}
-
-export interface MoneyStats {
-  total: number;
-}
-
-export interface CreateTaskData {
-  title: string;
-  description?: string;
-  status: 'todo' | 'in_progress' | 'done';
-  amount?: number;
-  task_date?: string;
-  start_time?: string;
-  end_time?: string;
-}
-
-export interface UpdateTaskData extends Partial<CreateTaskData> {
-  id: number;
-}
+import type {
+  Task,
+  TaskStats,
+  MoneyStats,
+  CreateTaskData,
+  UpdateTaskData,
+  TaskListResponse,
+  TaskCreateResponse,
+  TaskUpdateResponse,
+} from '../types';
 
 // Query Keys
 export const taskKeys = {

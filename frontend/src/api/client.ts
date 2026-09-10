@@ -1,16 +1,33 @@
-import axios from 'axios';
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1',
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1';
+
+const client = axios.create({
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
   withCredentials: true,
 });
 
-// Request interceptor - thêm token
-api.interceptors.request.use(
-  (config) => {
+// Biến để tránh multiple refresh requests cùng lúc
+let isRefreshing = false;
+let failedQueue: Array<{ resolve: (token: string) => void; reject: (error: Error) => void }> = [];
+
+const processQueue = (error: Error | null, token: string | null = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token!);
+    }
+  });
+  failedQueue = [];
+};
+
+// Tự động gắn token vào header nếu có
+client.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
     const token = localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -20,34 +37,22 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor - handle refresh token
-let isRefreshing = false;
-let failedQueue = [];
-
-const processQueue = (error, token = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
-};
-
-api.interceptors.response.use(
+// Interceptor để xử lý 401 và tự động refresh token
+client.interceptors.response.use(
   (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+  async (error: AxiosError) => {
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
 
+    // Nếu lỗi 401 và chưa thử refresh token
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
+        // Nếu đang refresh, đưa request vào hàng đợi
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
             originalRequest.headers.Authorization = `Bearer ${token}`;
-            return api(originalRequest);
+            return client(originalRequest);
           })
           .catch((err) => Promise.reject(err));
       }
@@ -57,25 +62,31 @@ api.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post(
-          `${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api/v1'}/auth/refresh`,
-          { refreshToken },
-          { withCredentials: true }
-        );
+        if (!refreshToken) {
+          throw new Error('No refresh token available');
+        }
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
+        const res = await axios.post(`${API_BASE_URL}/auth/refresh`, { refreshToken }, { withCredentials: true });
+        const { accessToken, refreshToken: newRefreshToken } = res.data;
+
         localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('refreshToken', newRefreshToken);
 
-        api.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
-        processQueue(null, accessToken);
+        // Cập nhật header cho request hiện tại
+        client.defaults.headers.common.Authorization = `Bearer ${accessToken}`;
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
 
-        return api(originalRequest);
+        processQueue(null, accessToken);
+        return client(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError, null);
+        processQueue(refreshError as Error, null);
+        // Xóa tokens và redirect về login
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
+        // Chỉ redirect nếu không ở trang login/register
+        if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+          window.location.href = '/login';
+        }
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -86,4 +97,4 @@ api.interceptors.response.use(
   }
 );
 
-export default api;
+export default client;

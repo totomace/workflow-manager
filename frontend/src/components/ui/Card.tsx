@@ -1,9 +1,18 @@
 import { forwardRef } from 'react';
 import { cn } from '../../lib/utils';
 
-const Card = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+type CardVariant = 'default' | 'elevated' | 'outlined' | 'filled' | 'gradient';
+type CardPadding = 'none' | 'sm' | 'md' | 'lg' | 'xl';
+
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: CardVariant;
+  padding?: CardPadding;
+  hover?: boolean;
+}
+
+const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className, children, variant = 'default', padding = 'md', hover, ...props }, ref) => {
-    const variants = {
+    const variants: Record<CardVariant, string> = {
       default: `
         bg-white dark:bg-gray-800
         border border-gray-100 dark:border-gray-700
@@ -29,7 +38,7 @@ const Card = forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
       `,
     };
 
-    const paddings = {
+    const paddings: Record<CardPadding, string> = {
       none: '',
       sm: 'p-3',
       md: 'p-4 sm:p-5',
