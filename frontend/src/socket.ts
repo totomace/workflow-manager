@@ -1,4 +1,4 @@
-import { io } from 'socket.io-client';
+import { io, Socket } from 'socket.io-client';
 import client from './api/client';
 import type { TaskCreatedEvent, TaskUpdatedEvent, TaskDeletedEvent, TokenRefreshedEvent } from './types';
 
@@ -13,26 +13,38 @@ const getAuthToken = (): string | null => localStorage.getItem('accessToken');
 
 // Flag to prevent multiple simultaneous refresh attempts
 let isRefreshingToken = false;
+let reconnectAttempts = 0;
+const MAX_RECONNECT_ATTEMPTS = 5;
+const RECONNECT_DELAY_BASE = 1000; // 1 second base delay
 
 // Type the socket with event handlers using io() options
-const socket = io(SOCKET_URL, {
+const socket: Socket = io(SOCKET_URL, {
   transports: ['websocket', 'polling'],
   // Use a function for auth - Socket.IO calls this before each connection/reconnection attempt
   auth: () => ({
     token: getAuthToken(),
   }),
-  // Disable auto-reconnect so we can handle token refresh manually
-  reconnection: false,
+  // Enable auto-reconnect with exponential backoff
+  reconnection: true,
+  reconnectionAttempts: MAX_RECONNECT_ATTEMPTS,
+  reconnectionDelay: RECONNECT_DELAY_BASE,
+  reconnectionDelayMax: 5000,
+  timeout: 20000,
+  // Prevent MaxListenersExceededWarning by setting max listeners
+  autoConnect: true,
 });
+
+// Set max listeners to prevent MaxListenersExceededWarning
+socket.setMaxListeners(20);
 
 socket.on('connect', () => {
   console.log('✅ Socket connected:', socket.id);
-  // Re-enable auto-reconnect after successful connection
-  socket.io.reconnection(true);
+  reconnectAttempts = 0; // Reset on successful connection
 });
 
 socket.on('connect_error', async (err: Error) => {
   console.error('❌ Socket connection error:', err.message);
+  reconnectAttempts++;
 
   // If token expired, try to refresh and reconnect
   if (err.message === 'Token expired' && !isRefreshingToken) {
@@ -91,6 +103,25 @@ socket.on('token_refreshed', (data: TokenRefreshedEvent) => {
     console.log('✅ Token refreshed via backend event');
   } else {
     console.error('❌ Backend token refresh failed:', data.error);
+  }
+});
+
+// Handle reconnection attempts
+socket.io.on('reconnect_attempt', (attemptNumber: number) => {
+  console.log(`🔄 Reconnection attempt ${attemptNumber}/${MAX_RECONNECT_ATTEMPTS}`);
+});
+
+socket.io.on('reconnect', (attemptNumber: number) => {
+  console.log(`✅ Reconnected after ${attemptNumber} attempts`);
+  reconnectAttempts = 0;
+});
+
+socket.io.on('reconnect_failed', () => {
+  console.error('❌ Reconnection failed after all attempts');
+  // Optionally redirect to login or show notification
+  if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+    // Don't force redirect, just log - let user decide
+    console.warn('⚠️ Socket reconnection failed. Please refresh the page or check your connection.');
   }
 });
 
