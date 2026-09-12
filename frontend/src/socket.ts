@@ -35,7 +35,10 @@ const socket: Socket = io(SOCKET_URL, {
 });
 
 // Set max listeners to prevent MaxListenersExceededWarning
-socket.setMaxListeners(20);
+// Check if method exists (may not exist in some browser bundles of socket.io-client)
+if (typeof socket.setMaxListeners === 'function') {
+  socket.setMaxListeners(20);
+}
 
 socket.on('connect', () => {
   console.log('✅ Socket connected:', socket.id);
