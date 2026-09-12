@@ -1,18 +1,18 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm } from 'react-hook_form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
+import { GoogleLogin } from '@react-oauth/google';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Lock, Mail, Sparkles } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { loginSchema } from '../schemas/authSchema';
 import { useAuth } from '../context/AuthContext';
 import { Button, Input } from '../components/ui';
-
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 const inputSurface =
   'bg-zinc-950/5 dark:bg-white/5 border-zinc-200/80 dark:border-white/10 dark:text-white dark:placeholder:text-zinc-500 focus:ring-blue-500 focus:border-blue-500';
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 interface LoginFormData {
   email: string;
@@ -51,7 +51,6 @@ const Login = () => {
   };
 
   return (
-    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#FAFAFA] p-4 text-zinc-950 dark:bg-[#09090B] dark:text-white">
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-32 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-blue-500/20 blur-3xl dark:bg-blue-500/25" />
@@ -124,10 +123,10 @@ const Login = () => {
               </div>
 
               <GoogleLogin
-                onSuccess={(credentialResponse) => handleGoogleLogin(credentialResponse.credential)}
+                onSuccess={(credentialResponse) => handleGoogleLogin(credentialResponse.credential as string)}
                 onError={() => toast.error('Đăng nhập Google thất bại')}
                 size="large"
-                width="100%"
+                width={300}
                 text="signin_with"
                 shape="rectangular"
               />
@@ -142,7 +141,6 @@ const Login = () => {
           </div>
         </motion.section>
       </main>
-    </GoogleOAuthProvider>
   );
 };
 

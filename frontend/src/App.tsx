@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider } from './context/AuthContext';
 import { DarkModeProvider } from './context/DarkModeContext';
 import { Toaster } from 'react-hot-toast';
@@ -9,6 +10,8 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile'; // <-- ĐÃ IMPORT
 import ProtectedRoute from './components/ProtectedRoute';
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 const AnimatedRoutes = () => {
   const location = useLocation();
@@ -39,9 +42,12 @@ function App() {
     <DarkModeProvider>
       <AuthProvider>
         <Toaster position="top-right" />
-        <Router>
-          <AnimatedRoutes />
-        </Router>
+        {/* GoogleOAuthProvider ở cấp cao nhất để tránh gọi initialize() nhiều lần */}
+        <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+          <Router>
+            <AnimatedRoutes />
+          </Router>
+        </GoogleOAuthProvider>
       </AuthProvider>
     </DarkModeProvider>
   );
