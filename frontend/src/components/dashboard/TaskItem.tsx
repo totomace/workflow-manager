@@ -2,16 +2,16 @@ import { motion } from 'framer-motion';
 import { Calendar, Clock3, Edit3, Trash2 } from 'lucide-react';
 import { Badge, Button } from '../ui';
 import type { TaskItemProps } from '../../types/dashboard';
-import { STATUS_LABELS, STATUS_VARIANTS, CHART_COLORS } from '../../constants/dashboard';
+import { STATUS_LABELS, STATUS_VARIANTS } from '../../constants/dashboard';
 
 export function TaskItem({
   task,
   onEdit,
   onDelete,
-  darkMode,
   formatCurrency,
   formatDate,
 }: TaskItemProps) {
+  const statusKey = task.status as keyof typeof STATUS_LABELS;
   return (
     <motion.article
       key={task.id}
@@ -24,8 +24,8 @@ export function TaskItem({
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0 flex-1">
           <div className="mb-2 flex flex-wrap items-center gap-2">
-            <Badge variant={STATUS_VARIANTS[task.status]} dot>
-              {STATUS_LABELS[task.status]}
+            <Badge variant={STATUS_VARIANTS[statusKey]} dot>
+              {STATUS_LABELS[statusKey]}
             </Badge>
             {task.amount > 0 && (
               <span className="rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300">

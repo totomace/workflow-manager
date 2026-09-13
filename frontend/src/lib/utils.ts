@@ -133,6 +133,7 @@ export function sleep(ms: number): Promise<void> {
 export interface JWTPayload {
   id: number;
   email: string;
+  full_name?: string;
   iat?: number;
   exp?: number;
   [key: string]: unknown;

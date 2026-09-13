@@ -2,12 +2,35 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLogin, useRegister, useGoogleLogin, useSetPassword, useLogout, useRefreshToken } from '../hooks/useAuth';
 import { decodeJWT } from '../lib/utils';
-import type { User } from '../types';
+import type { PublicUser } from '../types';
 
-const AuthContext = createContext<User | null>(null);
+interface AuthContextType {
+  user: PublicUser | null;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
+  register: (email: string, full_name: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshToken: () => Promise<void>;
+  setPassword: (password: string) => Promise<void>;
+  isLoggingIn: boolean;
+  isRegistering: boolean;
+  isGoogleLoggingIn: boolean;
+  isSettingPassword: boolean;
+  isLoggingOut: boolean;
+  isRefreshing: boolean;
+  loginError: unknown;
+  registerError: unknown;
+  googleLoginError: unknown;
+  setPasswordError: unknown;
+  logoutError: unknown;
+  refreshError: unknown;
+}
+
+const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<PublicUser | null>(null);
   const [loading, setLoading] = useState(true);
   const queryClient = useQueryClient();
 
@@ -26,7 +49,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       try {
         const payload = decodeJWT(token);
         if (payload) {
-          setUser({ id: payload.id, email: payload.email });
+          setUser({ id: payload.id, email: payload.email, full_name: payload.full_name || '' });
         } else {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
@@ -41,7 +64,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Sync user from React Query cache
   useEffect(() => {
-    const cachedUser = queryClient.getQueryData<User>(['user']);
+    const cachedUser = queryClient.getQueryData<PublicUser>(['user']);
     if (cachedUser && (!user || cachedUser.id !== user.id)) {
       setUser(cachedUser);
     }
@@ -49,32 +72,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   // Login function
   const login = async (email: string, password: string) => {
-    await loginMutation.mutateAsync({ email, password });
+    const data = await loginMutation.mutateAsync({ email, password });
+    setUser(data.user);
   };
 
   // Google login
   const loginWithGoogle = async (credential: string) => {
-    await googleLoginMutation.mutateAsync({ credential });
+    const data = await googleLoginMutation.mutateAsync({ credential });
+    setUser(data.user);
   };
 
   // Set password for Google account
   const setPassword = async (password: string) => {
-    await setPasswordMutation.mutateAsync({ password });
+    const data = await setPasswordMutation.mutateAsync({ password });
+    setUser(data.user);
   };
 
   // Register
   const register = async (email: string, full_name: string, password: string) => {
-    await registerMutation.mutateAsync({ email, full_name, password });
+    const data = await registerMutation.mutateAsync({ email, full_name, password });
+    setUser(data.user);
   };
 
   // Refresh token
   const refreshToken = async () => {
-    await refreshTokenMutation.mutateAsync();
+    const data = await refreshTokenMutation.mutateAsync();
+    setUser(data.user);
   };
 
   // Logout
   const logout = async () => {
     await logoutMutation.mutateAsync();
+    setUser(null);
   };
 
   return (

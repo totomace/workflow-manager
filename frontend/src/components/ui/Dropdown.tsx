@@ -2,7 +2,7 @@ import { forwardRef, useRef, useEffect, useState, type ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 import { ChevronDown } from 'lucide-react';
 
-interface DropdownOption {
+export interface DropdownOption {
   value: string;
   label: string;
   icon?: ReactNode;
@@ -12,7 +12,7 @@ interface DropdownOption {
 }
 
 interface DropdownProps {
-  options: DropdownOption[];
+  options: readonly DropdownOption[];
   onSelect?: (value: string, option: DropdownOption) => void;
   placeholder?: string;
   value?: string;
@@ -26,12 +26,13 @@ interface DropdownProps {
   // Controlled mode props
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
+  // Toggle callback for Select wrapper
+  onToggle?: () => void;
 }
 
 export const Dropdown = forwardRef<HTMLDivElement, DropdownProps>(
   (
     {
-      trigger,
       options,
       onSelect,
       placeholder,
@@ -43,10 +44,15 @@ export const Dropdown = forwardRef<HTMLDivElement, DropdownProps>(
       maxHeight = 240,
       searchable = false,
       searchPlaceholder = 'Tìm kiếm...',
+      isOpen: controlledIsOpen,
+      onOpenChange,
     },
     ref
   ) => {
-    const [isOpen, setIsOpen] = useState(false);
+    const [uncontrolledIsOpen, setUncontrolledIsOpen] = useState(false);
+    const isOpen = controlledIsOpen ?? uncontrolledIsOpen;
+    const setIsOpen = controlledIsOpen !== undefined ? onOpenChange ?? (() => {}) : setUncontrolledIsOpen;
+
     const [searchQuery, setSearchQuery] = useState('');
     const [highlightedIndex, setHighlightedIndex] = useState(-1);
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -71,7 +77,7 @@ export const Dropdown = forwardRef<HTMLDivElement, DropdownProps>(
 
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+    }, [setIsOpen]);
 
     // Keyboard navigation
     useEffect(() => {
@@ -84,8 +90,7 @@ export const Dropdown = forwardRef<HTMLDivElement, DropdownProps>(
           return;
         }
 
-        const selectableOptions = filteredOptions.filter((o) => !o.divider && !o.disabled);
-        const selectableCount = selectableOptions.length;
+        filteredOptions.filter((o) => !o.divider && !o.disabled);
 
         switch (event.key) {
           case 'ArrowDown':
@@ -309,33 +314,14 @@ export function Select({
   ...props
 }: SelectProps) {
   const selectedOption = props.options.find((o) => o.value === props.value);
-  const trigger = (
-    <button
-      type="button"
-      disabled={props.disabled}
-      className={cn(
-        'relative w-full inline-flex items-center justify-between gap-2',
-        'px-4 py-2.5',
-        'bg-white dark:bg-gray-800',
-        error
-          ? 'border-red-500 focus:ring-red-500'
-          : 'border-gray-200 dark:border-gray-600 focus:ring-violet-500',
-        'rounded-xl',
-        'text-sm text-gray-900 dark:text-white',
-        'placeholder:text-gray-400 dark:placeholder:text-gray-500',
-        'hover:border-violet-500 dark:hover:border-violet-500',
-        'focus:outline-none focus:ring-2 focus:border-transparent',
-        'disabled:opacity-50 disabled:cursor-not-allowed',
-        'transition-colors duration-150',
-        className
-      )}
-      onClick={() => !props.disabled && props.onToggle?.()}
-      aria-haspopup="listbox"
-      aria-expanded={props.isOpen}
-      aria-label={props.placeholder || 'Mở menu'}
-      aria-invalid={!!error}
-      aria-describedby={error ? `${name}-error` : helperText ? `${name}-helper` : undefined}
-    >
+
+  const handleToggle = () => {
+    if (!props.disabled) {
+      props.onOpenChange?.(!props.isOpen);
+    }
+  };
+
+  return (
       <span className={cn('truncate flex-1 text-left', props.value ? '' : 'text-gray-400 dark:text-gray-500')}>
         {props.value ? selectedOption?.label : props.placeholder}
       </span>
@@ -357,8 +343,9 @@ export function Select({
         </label>
       )}
       <Dropdown
-        trigger={trigger}
         {...props}
+        isOpen={props.isOpen}
+        onOpenChange={props.onOpenChange}
         onSelect={(value) => {
           onChange?.(value);
           props.onSelect?.(value, props.options.find((o) => o.value === value)!);

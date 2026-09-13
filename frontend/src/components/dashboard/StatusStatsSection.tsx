@@ -9,6 +9,7 @@ export function StatusStatsSection({
   tasks,
   statusPeriod,
   setStatusPeriod,
+  darkMode,
 }: StatusStatsSectionProps) {
   const stats = [
     { name: 'Cần làm', value: statusStats?.todo || 0, color: CHART_COLORS.todo },
@@ -52,7 +53,7 @@ export function StatusStatsSection({
           onChange={(nextPeriod: string) => {
             setStatusPeriod(nextPeriod as StatusStatsSectionProps['statusPeriod']);
           }}
-          options={PERIODS as StatusStatsSectionProps['statusPeriod'][]}
+          options={PERIODS}
           className="min-w-36"
         />
       </div>

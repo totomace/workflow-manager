@@ -4,7 +4,6 @@ import { TaskItem } from './TaskItem';
 import type { TaskListProps } from '../../types/dashboard';
 
 export function TaskList({
-  tasks,
   isLoading,
   filteredTasks,
   onEdit,

@@ -1,5 +1,7 @@
 // Dashboard Constants - Shared constants for Dashboard components
 
+import type { DropdownOption } from '../components/ui/Dropdown';
+
 export const STATUS_LABELS = {
   todo: 'Cần làm',
   in_progress: 'Đang làm',
@@ -18,12 +20,12 @@ export const CHART_COLORS = {
   done: '#10B981',
 } as const;
 
-export const PERIODS = [
+export const PERIODS: readonly DropdownOption[] = [
   { value: 'week', label: '7 ngày qua' },
   { value: 'month', label: '30 ngày qua' },
   { value: 'year', label: 'Năm nay' },
   { value: 'all', label: 'Tất cả' },
-] as const;
+];
 
 export type PeriodValue = (typeof PERIODS)[number]['value'];
 
@@ -52,18 +54,18 @@ export const TASK_FORM_DEFAULTS = {
 };
 
 // Task status options for Select
-export const TASK_STATUS_OPTIONS = [
+export const TASK_STATUS_OPTIONS: readonly DropdownOption[] = [
   { value: 'todo', label: 'Cần làm' },
   { value: 'in_progress', label: 'Đang làm' },
   { value: 'done', label: 'Hoàn thành' },
-] as const;
+];
 
 // Filter status options for Select
-export const FILTER_STATUS_OPTIONS = [
+export const FILTER_STATUS_OPTIONS: readonly DropdownOption[] = [
   { value: 'all', label: 'Tất cả trạng thái' },
   { value: 'todo', label: 'Cần làm' },
   { value: 'in_progress', label: 'Đang làm' },
   { value: 'done', label: 'Hoàn thành' },
-] as const;
+];
 
 export type FilterStatusValue = (typeof FILTER_STATUS_OPTIONS)[number]['value'];

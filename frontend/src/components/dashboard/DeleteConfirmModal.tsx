@@ -1,4 +1,4 @@
-import { Modal } from '../ui';
+import { ConfirmDialog } from '../ui';
 import type { DeleteConfirmModalProps } from '../../types/dashboard';
 
 export function DeleteConfirmModal({
@@ -8,15 +8,15 @@ export function DeleteConfirmModal({
   isPending,
 }: DeleteConfirmModalProps) {
   return (
-    <Modal
+    <ConfirmDialog
       isOpen={isOpen}
       onClose={onClose}
+      onConfirm={onConfirm}
       title="Xóa task"
       message="Bạn có chắc chắn muốn xóa task này? Hành động này không thể hoàn tác."
-      onConfirm={onConfirm}
       confirmText="Xóa"
       variant="danger"
-      isPending={isPending}
+      isLoading={isPending}
     />
   );
 }

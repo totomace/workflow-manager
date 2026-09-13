@@ -1,5 +1,5 @@
 import { Filter, Search } from 'lucide-react';
-import { Input, Select } from '../ui';
+import { Select } from '../ui';
 import type { TaskSearchFilterProps } from '../../types/dashboard';
 import { FILTER_STATUS_OPTIONS } from '../../constants/dashboard';
 
@@ -8,8 +8,6 @@ export function TaskSearchFilter({
   setSearchTerm,
   filterStatus,
   setFilterStatus,
-  formRef,
-  darkMode,
 }: TaskSearchFilterProps) {
   return (
     <div className="flex flex-col gap-3 sm:flex-row">
@@ -27,7 +25,7 @@ export function TaskSearchFilter({
         <Filter size={16} className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-zinc-400" />
         <Select
           value={filterStatus}
-          onChange={(nextStatus: 'all' | 'todo' | 'in_progress' | 'done') => setFilterStatus(nextStatus)}
+          onChange={(nextStatus: string) => setFilterStatus(nextStatus as 'all' | 'todo' | 'in_progress' | 'done')}
           options={FILTER_STATUS_OPTIONS}
           className="pl-10"
         />

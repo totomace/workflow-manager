@@ -12,8 +12,6 @@ import { Button, Input } from '../components/ui';
 const inputSurface =
   'bg-zinc-950/5 dark:bg-white/5 border-zinc-200/80 dark:border-white/10 dark:text-white dark:placeholder:text-zinc-500 focus:ring-blue-500 focus:border-blue-500';
 
-const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-
 interface LoginFormData {
   email: string;
   password: string;
@@ -35,8 +33,9 @@ const Login = () => {
       await login(data.email, data.password);
       toast.success('Đăng nhập thành công');
       navigate('/dashboard');
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Đăng nhập thất bại');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      toast.error(error.response?.data?.error || 'Đăng nhập thất bại');
     }
   };
 
@@ -45,8 +44,9 @@ const Login = () => {
       await loginWithGoogle(credential);
       toast.success('Đăng nhập Google thành công');
       navigate('/dashboard');
-    } catch (err) {
-      toast.error(err.response?.data?.error || 'Đăng nhập Google thất bại');
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { error?: string } } };
+      toast.error(error.response?.data?.error || 'Đăng nhập Google thất bại');
     }
   };
 

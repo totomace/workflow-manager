@@ -19,7 +19,6 @@ export function TaskForm({
   const {
     register,
     handleSubmit,
-    reset,
     setValue,
     watch,
     formState: { errors },
@@ -37,7 +36,6 @@ export function TaskForm({
   });
 
   const [displayAmount, setDisplayAmount] = useState('');
-  const [amountFocused, setAmountFocused] = useState(false);
 
   // Format amount for display (show in thousands with comma separator)
   const formatThousandsForDisplay = (amount: number): string => {
@@ -56,7 +54,6 @@ export function TaskForm({
       setValue('start_time', taskToEdit.start_time ? taskToEdit.start_time.slice(0, 5) : '');
       setValue('end_time', taskToEdit.end_time ? taskToEdit.end_time.slice(0, 5) : '');
       setDisplayAmount(formatThousandsForDisplay(taskToEdit.amount));
-      setAmountFocused(false);
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }, [taskToEdit, formRef, setValue]);
@@ -70,13 +67,11 @@ export function TaskForm({
   };
 
   const handleAmountFocus = () => {
-    setAmountFocused(true);
     const current = watch('amount');
     setDisplayAmount(current === 0 ? '' : Math.floor(current / 1000).toString());
   };
 
   const handleAmountBlur = () => {
-    setAmountFocused(false);
     const current = watch('amount');
     setDisplayAmount(formatThousandsForDisplay(current));
   };
@@ -97,7 +92,7 @@ export function TaskForm({
           {editId ? 'Đang sửa' : 'Mới'}
         </Badge>
       </div>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={handleSubmit(onSubmit as (data: TaskFormData) => Promise<void>)} className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <Input
             label="Tiêu đề"
@@ -157,7 +152,7 @@ export function TaskForm({
           <Select
             label="Trạng thái"
             value={watch('status')}
-            onChange={(nextStatus) => setValue('status', nextStatus)}
+            onChange={(nextStatus: 'todo' | 'in_progress' | 'done') => setValue('status', nextStatus)}
             options={TASK_STATUS_OPTIONS}
           />
         </div>

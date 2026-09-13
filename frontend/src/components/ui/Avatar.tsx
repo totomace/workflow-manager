@@ -1,4 +1,4 @@
-import { forwardRef, type HTMLAttributes, useState, useRef } from 'react';
+import React, { forwardRef, type HTMLAttributes, useState, useRef } from 'react';
 import { cn } from '../../lib/utils';
 
 export interface AvatarProps extends HTMLAttributes<HTMLDivElement> {

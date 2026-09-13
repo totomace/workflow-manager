@@ -53,7 +53,7 @@ export function MoneyStatsCard({
         onChange={(nextPeriod: string) => {
           setMoneyPeriod(nextPeriod as MoneyStatsCardProps['moneyPeriod']);
         }}
-        options={PERIODS as MoneyStatsCardProps['moneyPeriod'][]}
+        options={PERIODS}
         className="mt-5"
       />
     </motion.div>
